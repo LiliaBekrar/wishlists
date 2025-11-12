@@ -7,12 +7,15 @@ import { useWishlists } from '../hooks/useWishlists';
 import { FOCUS_RING, THEMES } from '../utils/constants';
 import CreateListModal from '../components/CreateListModal';
 import Toast from '../components/Toast';
+import { useNavigate } from 'react-router-dom'; // ⬅️ AJOUTE si pas déjà présent
+
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { wishlists, loading, createWishlist } = useWishlists();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const navigate = useNavigate();
 
   const handleCreateList = async (data: any) => {
     try {
@@ -203,11 +206,12 @@ export default function Dashboard() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <button
-                        className={`flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all ${FOCUS_RING}`}
-                      >
-                        Voir la liste
-                      </button>
+                    <button
+                      onClick={() => navigate(`/list/${wishlist.slug}`)}
+                      className={`flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all ${FOCUS_RING}`}
+                    >
+                      Voir la liste
+                    </button>
                       <button
                         className={`p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING}`}
                         aria-label="Plus d'options"
