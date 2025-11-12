@@ -5,11 +5,13 @@
 
 import React from 'react';
 import { BANNER_DEFAULT_HEIGHT, BANNER_OPACITY } from '../utils/constants';
-import type { ThemeType } from '../utils/constants';
-import { THEMES } from '../utils/constants';
+import type { ThemeType as ThemeTypeBase } from '../utils/constants';
 
-type BannerProps = {
-  height?: number;
+// ✅ Re-export pour que CreateListModal puisse importer depuis './banners'
+export type ThemeType = ThemeTypeBase;
+
+export type BannerProps = {
+  height?: number | string;
   className?: string;
 };
 
@@ -22,7 +24,7 @@ export const ChristmasBanner: React.FC<BannerProps> = ({
 }) => (
   <svg
     className={`w-full ${className}`}
-    height={height}
+    height={typeof height === 'number' ? `${height}px` : height}
     viewBox="0 0 1200 300"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
@@ -50,7 +52,7 @@ export const ChristmasBanner: React.FC<BannerProps> = ({
     <rect width="1200" height="300" fill="url(#xmasGrad)" />
     <rect width="1200" height="300" fill="url(#snowPattern)" />
 
-    {/* Sapins - utilise BANNER_OPACITY.overlay pour l'opacité */}
+    {/* Sapins */}
     {[
       { x: 150, scale: 0.8, opacity: BANNER_OPACITY.overlay },
       { x: 300, scale: 1, opacity: BANNER_OPACITY.decorations },
@@ -69,7 +71,7 @@ export const ChristmasBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Flocons - utilise BANNER_OPACITY.decorations */}
+    {/* Flocons */}
     <g opacity={BANNER_OPACITY.decorations} filter="url(#blurSnow)">
       {[
         { cx: 100, cy: 50, r: 4 },
@@ -98,7 +100,7 @@ export const BirthdayBanner: React.FC<BannerProps> = ({
 }) => (
   <svg
     className={`w-full ${className}`}
-    height={height}
+    height={typeof height === 'number' ? `${height}px` : height}
     viewBox="0 0 1200 300"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
@@ -120,7 +122,7 @@ export const BirthdayBanner: React.FC<BannerProps> = ({
 
     <rect width="1200" height="300" fill="url(#bdayGrad)" />
 
-    {/* Confettis - utilise BANNER_OPACITY.overlay */}
+    {/* Confettis */}
     <g opacity={BANNER_OPACITY.overlay + 0.1}>
       {[
         { x: 100, y: 50, w: 12, h: 20, rot: 15, fill: '#fbbf24' },
@@ -164,7 +166,7 @@ export const BirthdayBanner: React.FC<BannerProps> = ({
       <rect x="-45" y="-90" width="90" height="45" fill="#7c3aed" rx="8" />
       <rect x="-45" y="-90" width="90" height="8" fill="url(#cakeGrad)" />
 
-      {/* Bougies avec flammes */}
+      {/* Bougies */}
       {[-25, 0, 25].map((x, i) => (
         <g key={i} transform={`translate(${x}, -105)`}>
           <rect x="-4" y="0" width="8" height="25" fill="#fbbf24" rx="2" />
@@ -175,7 +177,7 @@ export const BirthdayBanner: React.FC<BannerProps> = ({
       ))}
     </g>
 
-    {/* Ballons - utilise BANNER_OPACITY.decorations */}
+    {/* Ballons */}
     {[
       { cx: 150, cy: 100, r: 30, fill: '#ec4899' },
       { cx: 1050, cy: 80, r: 35, fill: '#3b82f6' },
@@ -203,7 +205,7 @@ export const BirthBanner: React.FC<BannerProps> = ({
 }) => (
   <svg
     className={`w-full ${className}`}
-    height={height}
+    height={typeof height === 'number' ? `${height}px` : height}
     viewBox="0 0 1200 300"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
@@ -224,7 +226,7 @@ export const BirthBanner: React.FC<BannerProps> = ({
 
     <rect width="1200" height="300" fill="url(#skyGrad)" />
 
-    {/* Nuages - utilise BANNER_OPACITY.decorations */}
+    {/* Nuages */}
     {[
       { x: 120, y: 60, scale: 1 },
       { x: 380, y: 100, scale: 1.3 },
@@ -241,7 +243,7 @@ export const BirthBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Étoiles - utilise BANNER_OPACITY.decorations */}
+    {/* Étoiles */}
     {[
       { x: 100, y: 40, size: 1.2, fill: '#fde68a' },
       { x: 300, y: 80, size: 1, fill: '#fef3c7' },
@@ -259,13 +261,13 @@ export const BirthBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Lune - utilise BANNER_OPACITY.overlay */}
+    {/* Lune */}
     <g opacity={BANNER_OPACITY.overlay}>
       <circle cx="1050" cy="100" r="50" fill="#fef3c7" />
       <circle cx="1045" cy="95" r="45" fill="#fde68a" />
     </g>
 
-    {/* Oiseaux - utilise BANNER_OPACITY.pattern */}
+    {/* Oiseaux */}
     {[
       { x: 200, y: 150 },
       { x: 450, y: 130 },
@@ -289,7 +291,7 @@ export const BirthBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Arc-en-ciel - utilise BANNER_OPACITY.pattern */}
+    {/* Arc-en-ciel */}
     <g opacity={BANNER_OPACITY.pattern * 3}>
       {[
         { r: 250, stroke: '#ef4444', offset: 0 },
@@ -321,7 +323,7 @@ export const WeddingBanner: React.FC<BannerProps> = ({
 }) => (
   <svg
     className={`w-full ${className}`}
-    height={height}
+    height={typeof height === 'number' ? `${height}px` : height}
     viewBox="0 0 1200 300"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
@@ -348,7 +350,7 @@ export const WeddingBanner: React.FC<BannerProps> = ({
 
     <rect width="1200" height="300" fill="url(#weddingGrad)" />
 
-    {/* Pétales - utilise BANNER_OPACITY.overlay */}
+    {/* Pétales */}
     <g opacity={BANNER_OPACITY.overlay} filter="url(#petalBlur)">
       {[
         { x: 80, y: 50, rot: 25, scale: 1 },
@@ -384,7 +386,7 @@ export const WeddingBanner: React.FC<BannerProps> = ({
       </g>
     </g>
 
-    {/* Colombes - utilise BANNER_OPACITY.decorations */}
+    {/* Colombes */}
     {[
       { x: 200, y: 80, flip: false },
       { x: 1000, y: 100, flip: true }
@@ -400,7 +402,7 @@ export const WeddingBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Cœurs - utilise BANNER_OPACITY.pattern */}
+    {/* Cœurs */}
     {[
       { x: 400, y: 50, size: 0.8 },
       { x: 600, y: 30, size: 1 },
@@ -414,7 +416,7 @@ export const WeddingBanner: React.FC<BannerProps> = ({
       </g>
     ))}
 
-    {/* Guirlande - utilise BANNER_OPACITY.decorations */}
+    {/* Guirlande */}
     <g opacity={BANNER_OPACITY.decorations - 0.3}>
       {Array.from({ length: 12 }).map((_, i) => {
         const x = 100 + i * 100;
@@ -439,7 +441,7 @@ export const ModernBanner: React.FC<BannerProps> = ({
 }) => (
   <svg
     className={`w-full ${className}`}
-    height={height}
+    height={typeof height === 'number' ? `${height}px` : height}
     viewBox="0 0 1200 300"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
@@ -495,7 +497,7 @@ export const ModernBanner: React.FC<BannerProps> = ({
 );
 
 // ============================================================
-// 📦 EXPORT : Mapping thème → composant
+// 📦 EXPORT : Mapping thème → composant + helper
 // ============================================================
 export const BannerMap: Record<ThemeType, React.ComponentType<BannerProps>> = {
   'noël': ChristmasBanner,
@@ -504,5 +506,8 @@ export const BannerMap: Record<ThemeType, React.ComponentType<BannerProps>> = {
   'mariage': WeddingBanner,
   'autre': ModernBanner
 };
+
+export const getBannerByTheme = (theme: ThemeType): React.ComponentType<BannerProps> =>
+  BannerMap[theme];
 
 export default ModernBanner;
