@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import { useItems } from '../hooks/useItems';
-import { THEMES, FOCUS_RING, BANNER_HEIGHT } from '../utils/constants';
+import { FOCUS_RING, BANNER_HEIGHT } from '../utils/constants';
 import { BannerMap } from '../components/banners';
 import type { Wishlist } from '../hooks/useWishlists';
 import AddItemModal from '../components/AddItemModal';
