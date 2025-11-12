@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-refresh/only-export-components */
 // 📄 banners.tsx
 // 🧠 Rôle : Bannières SVG thématiques modernes
 
 import React from 'react';
 import { BANNER_DEFAULT_HEIGHT, BANNER_OPACITY } from '../utils/constants';
+import type { ThemeType } from '../utils/constants';
+import { THEMES } from '../utils/constants';
 
 type BannerProps = {
   height?: number;
@@ -493,14 +497,12 @@ export const ModernBanner: React.FC<BannerProps> = ({
 // ============================================================
 // 📦 EXPORT : Mapping thème → composant
 // ============================================================
-export const BannerMap = {
-  noël: ChristmasBanner,
-  anniversaire: BirthdayBanner,
-  naissance: BirthBanner,
-  mariage: WeddingBanner,
-  autre: ModernBanner
-} as const;
-
-export type ThemeType = keyof typeof BannerMap;
+export const BannerMap: Record<ThemeType, React.ComponentType<BannerProps>> = {
+  'noël': ChristmasBanner,
+  'anniversaire': BirthdayBanner,
+  'naissance': BirthBanner,
+  'mariage': WeddingBanner,
+  'autre': ModernBanner
+};
 
 export default ModernBanner;
