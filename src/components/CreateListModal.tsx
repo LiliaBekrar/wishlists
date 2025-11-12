@@ -1,9 +1,8 @@
 // 📄 CreateListModal.tsx
 // 🧠 Rôle : Modal de création de liste responsive mobile-first
 import { useState } from 'react';
-import { BannerMap } from './banners';
+import { getBannerByTheme, type ThemeType } from './banners';
 import { THEMES, VISIBILITIES, FOCUS_RING, BANNER_HEIGHT } from '../utils/constants';
-import type { ThemeType } from './banners';
 
 type VisibilityType = 'privée' | 'partagée' | 'publique';
 
@@ -52,8 +51,11 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
     }
   };
 
-  // Récupérer le composant de bannière selon le thème
-  const BannerComponent = BannerMap[theme];
+  // ✅ Récupérer le composant de bannière via helper typé
+  const BannerComponent = getBannerByTheme(theme);
+
+  // ✅ Clés typées depuis THEMES sans forcer ThemeType si la constante évolue
+  const themeKeys = Object.keys(THEMES) as Array<keyof typeof THEMES>;
 
   return (
     <div
@@ -137,15 +139,16 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
               Thème de la liste *
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-              {(Object.keys(THEMES) as ThemeType[]).map((themeKey) => {
+              {themeKeys.map((themeKey) => {
                 const themeData = THEMES[themeKey];
-                const isSelected = theme === themeKey;
+                const themeValue = themeKey as ThemeType;
+                const isSelected = theme === themeValue;
 
                 return (
                   <button
-                    key={themeKey}
+                    key={themeKey as string}
                     type="button"
-                    onClick={() => setTheme(themeKey)}
+                    onClick={() => setTheme(themeValue)}
                     disabled={loading}
                     className={`
                       relative p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all
