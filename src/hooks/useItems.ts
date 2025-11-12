@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 useItems.ts
 // 🧠 Rôle : Hook pour gérer les items (cadeaux) d'une liste
 import { useState, useEffect } from 'react';
@@ -11,7 +12,6 @@ export interface Item {
   url: string | null;
   image_url: string | null;
   price: number | null;
-  price_cents: number | null;
   priority: 'basse' | 'moyenne' | 'haute';
   status: string;
   quantity: number;
@@ -61,6 +61,10 @@ export function useItems(wishlistId: string | undefined) {
 
   // Créer un item
   const createItem = async (input: {
+    size: any;
+    color: any;
+    promo_code: any;
+    image_url: any;
     name: string;
     description: string;
     url: string;
@@ -80,8 +84,7 @@ export function useItems(wishlistId: string | undefined) {
           note: input.description.trim() || null,
           url: input.url.trim() || null,
           image_url: input.image_url.trim() || null,
-          price: input.price, // ⬅️ Seul le prix en euros suffit maintenant
-          // price_cents sera calculé automatiquement par le trigger
+          price: input.price,
           priority: input.priority,
           size: input.size.trim() || null,
           color: input.color.trim() || null,

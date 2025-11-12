@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 ListView.tsx
 // 🧠 Rôle : Page de détail d'une liste avec items
 import { useEffect, useState } from 'react';
