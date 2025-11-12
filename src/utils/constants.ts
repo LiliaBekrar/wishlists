@@ -3,13 +3,39 @@
 export const APP_NAME = 'WishLists by Lilia'; // ⬅️ Nom de l'app
 export const APP_TAGLINE = 'Crée, partage, maîtrise ton budget cadeaux.'; // ⬅️ Slogan
 
+// ============================================================
+// 🎨 THÈMES - Types de listes de cadeaux
+// ⚙️ Paramètres à personnaliser
+// ============================================================
 export const THEMES = {
-  noël: { label: 'Noël 🎄', colors: ['#2d5016', '#c41e3a', '#ffd700'] },
-  anniversaire: { label: 'Anniversaire 🎂', colors: ['#8b5cf6', '#ec4899', '#fbbf24'] },
-  naissance: { label: 'Naissance 👶', colors: ['#60a5fa', '#f9a8d4', '#fde68a'] },
-  mariage: { label: 'Mariage 💍', colors: ['#e11d48', '#fef3c7', '#fda4af'] },
-  autre: { label: 'Autre 🎁', colors: ['#6b7280', '#9ca3af', '#d1d5db'] }
+  'noël': {
+    label: 'Noël 🎄',
+    colors: ['#2d5016', '#c41e3a', '#ffd700'],
+    banner: 'christmas'
+  },
+  'anniversaire': {
+    label: 'Anniversaire 🎂',
+    colors: ['#8b5cf6', '#ec4899', '#fbbf24'],
+    banner: 'birthday'
+  },
+  'naissance': {
+    label: 'Naissance 👶',
+    colors: ['#60a5fa', '#f9a8d4', '#fde68a'],
+    banner: 'baby'
+  },
+  'mariage': {
+    label: 'Mariage 💍',
+    colors: ['#e11d48', '#fef3c7', '#fda4af'],
+    banner: 'wedding'
+  },
+  'autre': {
+    label: 'Autre 🎁',
+    colors: ['#6b7280', '#9ca3af', '#d1d5db'],
+    banner: 'other'
+  }
 } as const;
+
+export type ThemeType = keyof typeof THEMES;
 
 // ============================================================
 // 🎨 BANNIÈRES : DIMENSIONS & STYLES
