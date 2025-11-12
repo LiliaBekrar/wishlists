@@ -245,3 +245,60 @@ html {
   animation: swing 2s ease-in-out infinite;
   transform-origin: top center;
 }
+
+/* ===== Marquee réutilisable ===== */
+
+/* Track horizontale infinie (déplace son contenu vers la gauche) */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+
+  /* -50% car on duplique le contenu */
+}
+
+/* Masque/viewport (le conteneur qui "coupe" la track) */
+.marquee-mask {
+  overflow: hidden;
+}
+
+/* La track qui bouge, doit contenir 2 copies du texte */
+.marquee-track {
+  display: inline-flex;
+  /* met les 2 spans sur une ligne */
+  white-space: nowrap;
+  animation-name: marquee-x;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+/* Vitesses pratiques (choisis-en une) */
+.marquee-duration-6s {
+  animation-duration: 6s;
+}
+
+.marquee-duration-8s {
+  animation-duration: 8s;
+}
+
+.marquee-duration-12s {
+  animation-duration: 12s;
+}
+
+/* Pause au survol (optionnel) */
+.marquee-pause-on-hover:hover {
+  animation-play-state: paused;
+}
+
+/* Accessibilité: respecte la réduction d’animations */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none !important;
+    transform: none !important;
+  }
+}

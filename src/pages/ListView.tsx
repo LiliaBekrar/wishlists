@@ -123,7 +123,7 @@ export default function ListView() {
     );
   }
 
-  const themeData = THEMES[wishlist.theme];
+  // const themeData = THEMES[wishlist.theme];
   const BannerComponent = BannerMap[wishlist.theme];
   const isOwner = user?.id === wishlist.owner_id;
 
