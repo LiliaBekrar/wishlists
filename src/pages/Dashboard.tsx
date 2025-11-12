@@ -1,10 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 Dashboard.tsx
-// 🧠 Rôle : Dashboard utilisateur mobile-first
+// 🧠 Rôle : Dashboard utilisateur mobile-first avec modal création
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { FOCUS_RING } from '../utils/constants';
+import CreateListModal from '../components/CreateListModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleCreateList = async (data: any) => {
+    console.log('✅ Données de la liste:', data);
+    // TODO: Appel Supabase
+    // const { data: newList, error } = await supabase
+    //   .from('wishlists')
+    //   .insert({
+    //     name: data.name,
+    //     description: data.description,
+    //     theme: data.theme,
+    //     visibility: data.visibility,
+    //     owner_id: user.id
+    //   })
+    //   .select()
+    //   .single();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
@@ -59,8 +79,9 @@ export default function Dashboard() {
               Ajoute tes envies, partage avec tes proches et évite les doublons !
             </p>
 
-            {/* CTA Button responsive */}
+            {/* CTA Button responsive avec onClick */}
             <button
+              onClick={() => setIsModalOpen(true)}
               className={`group relative inline-flex items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white text-base sm:text-lg font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105 ${FOCUS_RING}`}
             >
               <span className="relative z-10">➕ Créer ma première liste</span>
@@ -117,6 +138,13 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal création liste */}
+      <CreateListModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateList}
+      />
     </div>
   );
 }

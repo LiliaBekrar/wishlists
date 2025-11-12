@@ -34,3 +34,22 @@ export const BANNER_OPACITY = {
 export const BANNER_PATTERN_OPACITY = BANNER_OPACITY.pattern; // ⬅️ Rétrocompatibilité
 
 export const FOCUS_RING = 'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+
+// ============================================================
+// 🔐 VISIBILITÉS - Règles d'accès aux listes
+// ⚙️ Paramètres à personnaliser
+// ============================================================
+export const VISIBILITIES = {
+  privée: {
+    label: '🔒 Privée',
+    description: 'Invitation e-mail → auto viewer ; Lien → demande validation'
+  },
+  partagée: {
+    label: '🔗 Partagée',
+    description: 'Lecture libre ; Réserver → demande à rejoindre'
+  },
+  publique: {
+    label: '🌍 Publique',
+    description: 'Lecture libre ; Réserver → auto viewer'
+  }
+} as const;

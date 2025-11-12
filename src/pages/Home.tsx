@@ -59,7 +59,7 @@ export default function Home() {
         />
       )}
 
-      {/* Bannière responsive */}
+      {/* Bannière responsive — version initiale conservée */}
       <div className="relative overflow-hidden">
         <ModernBanner height={BANNER_HEIGHT.medium} className="sm:h-[300px] md:h-[350px]" />
 
@@ -69,26 +69,25 @@ export default function Home() {
               {APP_NAME}
             </h1>
 
-            {/* Tagline avec bon espacement */}
-            <p className="text-base sm:text-lg md:text-xl font-semibold opacity-95 drop-shadow mb-2 sm:mb-3S">
+            {/* Tagline (fix type: sm:mb-3S -> sm:mb-3) */}
+            <p className="text-base sm:text-lg md:text-xl font-semibold opacity-95 drop-shadow mb-2 sm:mb-3">
               {APP_TAGLINE}
             </p>
 
-            {/* Description avec espacement en haut */}
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl font-light opacity-85 drop-shadow px-2 pb-4 sm:pb-1 mb-3 ">
+            {/* Description avec un peu plus d'air en bas pour l’overlap */}
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl font-light opacity-85 drop-shadow px-2 pb-6 sm:pb-4 mb-3">
               Ta wishlist intelligente — partage, réserves et budget maîtrisé 🎁
             </p>
           </div>
         </div>
-
       </div>
 
-      {/* Contenu principal responsive */}
+      {/* Contenu principal — mêmes -mt qu’au début */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 sm:-mt-20 md:-mt-24 relative z-10">
         <div className="backdrop-blur-xl bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border border-white/20 p-6 sm:p-8 md:p-12 mb-8 sm:mb-12">
 
           {showLogin ? (
-            /* --- Section Connexion responsive --- */
+            /* --- Section Connexion --- */
             <div className="max-w-md mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-2">
                 Connexion à WishLists
@@ -142,15 +141,15 @@ export default function Home() {
                     onClick={() => navigate('/')}
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                   >
-                    ← Retour à l'accueil
+                    ← Retour à l&apos;accueil
                   </button>
                 </div>
               </form>
             </div>
           ) : (
-            /* --- Section Hero responsive --- */
+            /* --- Section Hero --- */
             <>
-              {/* Avantages clés - stack sur mobile */}
+              {/* Avantages clés — mêmes cards, centrage emoji corrigé */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
                 {[
                   {
@@ -174,11 +173,15 @@ export default function Home() {
                 ].map((feature, i) => (
                   <div
                     key={i}
-                    className="group relative bg-white/60 backdrop-blur rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200/50 hover:border-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                    className="group relative bg-white/60 backdrop-blur rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200/50 hover:border-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center"
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-xl sm:rounded-2xl transition-opacity`}></div>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-xl sm:rounded-2xl transition-opacity`} />
                     <div className="relative">
-                      <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">{feature.icon}</div>
+                      <div className="mb-3 sm:mb-4 grid place-items-center">
+                        <span className="text-4xl sm:text-5xl leading-none" aria-hidden>
+                          {feature.icon}
+                        </span>
+                      </div>
                       <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-1 sm:mb-2">{feature.title}</h3>
                       <p className="text-gray-600 text-xs sm:text-sm">{feature.desc}</p>
                     </div>
@@ -186,7 +189,7 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* CTA responsive */}
+              {/* CTA identique */}
               <div className="text-center">
                 <button
                   onClick={() => navigate('/?login=true')}
@@ -205,7 +208,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* --- Section "Comment ça marche" responsive --- */}
+        {/* --- Section "Comment ça marche" --- */}
         <div className="pb-12 sm:pb-16 md:pb-20">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2 sm:mb-4 px-4">
             Comment ça marche ?
@@ -223,8 +226,8 @@ export default function Home() {
             ].map((item, i) => (
               <div key={i} className="text-center group">
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl rotate-6 group-hover:rotate-12 transition-transform`}></div>
-                  <div className={`relative bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl w-full h-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg`}>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl rotate-6 group-hover:rotate-12 transition-transform`} />
+                  <div className={`relative bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl w-full h-full flex items-center justify-center text-white text-2xl sm:3xl font-bold shadow-lg`}>
                     {item.step}
                   </div>
                 </div>
