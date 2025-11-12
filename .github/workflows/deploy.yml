@@ -34,12 +34,10 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Inject env for Vite build
-        run: |
-          echo "VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
-          echo "VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
-
       - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: SPA fallback (copy index.html to 404.html)

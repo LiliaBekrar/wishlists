@@ -1,17 +1,27 @@
-import { useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function TestAuth() {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  // Affiche clairement si Supabase est mal configuré
+  useEffect(() => {
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      setMessage("❌ Variables VITE_SUPABASE_* manquantes (voir console).");
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (error) {
-      setMessage('❌ Erreur : ' + error.message);
-    } else {
-      setMessage('✅ Email envoyé ! Vérifie ta boîte mail.');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) setMessage("❌ Erreur : " + error.message);
+      else setMessage("✅ Email envoyé ! Vérifie ta boîte mail.");
+    } catch (err: any) {
+      console.error(err);
+      setMessage("❌ Exception: " + (err?.message ?? "inconnue"));
     }
   };
 
@@ -28,10 +38,7 @@ export default function TestAuth() {
             className="w-full p-3 border rounded mb-4"
             required
           />
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700"
-          >
+          <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">
             Envoyer magic link
           </button>
         </form>
