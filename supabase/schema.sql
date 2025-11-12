@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS items (
   url TEXT CHECK (url ~* '^https?://'), -- Validation URL
   image_url TEXT,
   price DECIMAL(10, 2) CHECK (price >= 0),
-  priority TEXT CHECK (priority IN ('faible', 'moyenne', 'haute')) DEFAULT 'moyenne',
+  priority TEXT CHECK (priority IN ('basse', 'moyenne', 'haute')) DEFAULT 'moyenne',
   status TEXT NOT NULL CHECK (status IN ('disponible', 'réservé', 'acheté', 'libéré')) DEFAULT 'disponible',
   quantity INTEGER CHECK (quantity > 0) DEFAULT 1,
   position INTEGER DEFAULT 0, -- Pour tri manuel

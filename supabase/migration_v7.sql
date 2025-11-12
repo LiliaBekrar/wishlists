@@ -147,7 +147,7 @@ END $$;
 -- Ajouter contraintes CHECK séparément (ignore erreur si existe)
 DO $$
 BEGIN
-  ALTER TABLE items ADD CONSTRAINT items_priority_check CHECK (priority IN ('faible', 'moyenne', 'haute'));
+  ALTER TABLE items ADD CONSTRAINT items_priority_check CHECK (priority IN ('basse', 'moyenne', 'haute'));
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;

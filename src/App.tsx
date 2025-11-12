@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import ListView from './pages/ListView';
 import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
 
@@ -35,6 +36,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="list/:slug" element={<ListView />} />
             <Route
               path="/dashboard"
               element={
