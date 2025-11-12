@@ -1,0 +1,36 @@
+// 📄 constants.ts
+// 🧠 Rôle : Constantes configurables
+export const APP_NAME = 'WishLists by Lilia'; // ⬅️ Nom de l'app
+export const APP_TAGLINE = 'Crée, partage, maîtrise ton budget cadeaux.'; // ⬅️ Slogan
+
+export const THEMES = {
+  noël: { label: 'Noël 🎄', colors: ['#2d5016', '#c41e3a', '#ffd700'] },
+  anniversaire: { label: 'Anniversaire 🎂', colors: ['#8b5cf6', '#ec4899', '#fbbf24'] },
+  naissance: { label: 'Naissance 👶', colors: ['#60a5fa', '#f9a8d4', '#fde68a'] },
+  mariage: { label: 'Mariage 💍', colors: ['#e11d48', '#fef3c7', '#fda4af'] },
+  autre: { label: 'Autre 🎁', colors: ['#6b7280', '#9ca3af', '#d1d5db'] }
+} as const;
+
+// ============================================================
+// 🎨 BANNIÈRES : DIMENSIONS & STYLES
+// ============================================================
+export const BANNER_HEIGHT = {
+  small: 200,      // ⬅️ Petite bannière (cards)
+  medium: 300,     // ⬅️ Moyenne (pages listes)
+  large: 350,      // ⬅️ Grande (home, profils publics)
+  xlarge: 400      // ⬅️ Très grande (landing pages spéciales)
+} as const;
+
+export const BANNER_DEFAULT_HEIGHT = BANNER_HEIGHT.medium; // ⬅️ Hauteur par défaut
+
+// Opacités pour les effets de bannières
+export const BANNER_OPACITY = {
+  pattern: 0.1,      // ⬅️ Motifs de fond (flocons, confettis)
+  overlay: 0.6,      // ⬅️ Formes avec blur
+  decorations: 0.8,  // ⬅️ Éléments décoratifs (étoiles, pétales)
+  text: 0.95         // ⬅️ Texte sur bannière
+} as const;
+
+export const BANNER_PATTERN_OPACITY = BANNER_OPACITY.pattern; // ⬅️ Rétrocompatibilité
+
+export const FOCUS_RING = 'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';

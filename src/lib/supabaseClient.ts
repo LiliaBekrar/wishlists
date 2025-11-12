@@ -1,17 +1,18 @@
 // src/lib/supabaseClient.ts
-import { createClient } from "@supabase/supabase-js";
+// 🧠 Rôle : Client Supabase configuré
+import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!url || !anon) {
-  // ⚠️ Voir la console du navigateur si ça s’affiche
-  console.error("❌ VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY manquantes au runtime.");
-  console.error("VITE_SUPABASE_URL:", url);
-  console.error(
-    "VITE_SUPABASE_ANON_KEY:",
-    anon ? `(présente, ${anon.length} chars)` : "absente"
-  );
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('❌ Manque VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY dans .env');
 }
 
-export const supabase = createClient(url ?? "", anon ?? "");
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

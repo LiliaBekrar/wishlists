@@ -1,0 +1,18 @@
+// 📄 authStore.ts
+// 🧠 Rôle : State global authentification (Zustand)
+import { create } from 'zustand';
+import type { Profile } from '../types/db';
+
+interface AuthState {
+  user: Profile | null;
+  loading: boolean;
+  setUser: (user: Profile | null) => void;
+  setLoading: (loading: boolean) => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  loading: true,
+  setUser: (user) => set({ user }),
+  setLoading: (loading) => set({ loading })
+}));
