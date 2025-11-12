@@ -75,7 +75,7 @@ export default function Home() {
             </p>
 
             {/* Description avec espacement en haut */}
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl font-light opacity-85 drop-shadow px-2 pb-4 sm:pb-1 mb-3 sm:mb-0 ">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl font-light opacity-85 drop-shadow px-2 pb-4 sm:pb-1 mb-3 ">
               Ta wishlist intelligente — partage, réserves et budget maîtrisé 🎁
             </p>
           </div>
