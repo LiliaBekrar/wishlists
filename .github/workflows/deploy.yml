@@ -17,11 +17,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: github-pages   # <-- important pour accéder aux vars de l’environnement
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup Node
+      # Node 20.x requis par Vite 7
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,7 +32,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # ✅ Indispensable pour Pages (crée la build version)
+      # Indispensable pour Pages
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
