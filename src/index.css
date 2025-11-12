@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
-/* utilitaires */
-.btn { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium shadow-sm border; }
-.btn-primary { @apply bg-emerald-700 text-white hover:bg-emerald-800 border-emerald-800; }
-.input { @apply border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500; }
-.textarea { @apply border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500; }
-.card { @apply bg-white border rounded-xl shadow-sm; }
+/* Focus visibles pour A11y */
+*:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-blue-500;
+}
+
+/* Animations personnalisées */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
