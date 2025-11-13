@@ -3,6 +3,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { FOCUS_RING } from '../utils/constants';
+import NotificationBadge from './NotificationBadge';
 
 export default function Header() {
   const { user, signOut } = useAuth();
@@ -10,7 +11,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        {/* ⬅️ h-auto + py pour permettre au header de grandir si ça wrap */}
+        <div className="flex justify-between items-center gap-3 py-2">
           {/* Logo */}
           <Link
             to="/"
@@ -24,15 +26,9 @@ export default function Header() {
               <span className="text-xs text-gray-500">by Lilia</span>
             </div>
           </Link>
-            {/* ⬅️ FIX : emoji séparé du texte pour éviter bg-clip-text */}
-            {/* <span className="text-3xl">🎁</span>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              {APP_NAME}
-            </span>
-          </Link> */}
 
           {/* Navigation */}
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
             {user ? (
               <>
                 <Link
@@ -41,6 +37,9 @@ export default function Header() {
                 >
                   Mes listes
                 </Link>
+
+                <NotificationBadge />
+
                 <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
                     {(user.pseudo?.[0] || user.email[0]).toUpperCase()}
@@ -49,6 +48,7 @@ export default function Header() {
                     {user.pseudo || user.email.split('@')[0]}
                   </span>
                 </div>
+
                 <button
                   onClick={signOut}
                   className={`bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-all ${FOCUS_RING}`}

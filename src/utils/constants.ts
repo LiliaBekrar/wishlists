@@ -79,3 +79,17 @@ export const VISIBILITIES = {
     description: 'Lecture libre ; Réserver → auto viewer'
   }
 } as const;
+
+// ============================================================
+// 📊 OPTIONS DE TRI - Pour les items de wishlist
+// ============================================================
+export const ITEM_SORT_OPTIONS = [
+  { value: 'priority-desc', label: 'Priorité (haute → basse)', icon: '⭐' },
+  { value: 'priority-asc', label: 'Priorité (basse → haute)', icon: '⭐' },
+  { value: 'price-asc', label: 'Prix (croissant)', icon: '💰' },
+  { value: 'price-desc', label: 'Prix (décroissant)', icon: '💰' },
+  { value: 'name-asc', label: 'Nom (A → Z)', icon: '🔤' },
+  { value: 'name-desc', label: 'Nom (Z → A)', icon: '🔤' },
+  { value: 'date-desc', label: 'Plus récents', icon: '📅' },
+  { value: 'date-asc', label: 'Plus anciens', icon: '📅' }
+] as const;

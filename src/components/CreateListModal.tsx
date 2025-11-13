@@ -69,14 +69,17 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
 
         {/* Header avec aperçu bannière */}
         <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl md:rounded-t-3xl">
-          <BannerComponent height={BANNER_HEIGHT.small} />
+          {/* Bannière en z-0 */}
+          <div className="relative z-0">
+            <BannerComponent height={BANNER_HEIGHT.small} />
+          </div>
 
-          {/* Bouton fermer */}
+          {/* Bouton fermer toujours au-dessus */}
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute z-20 top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Fermer la modal"
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,9 +87,12 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
             </svg>
           </button>
 
-          {/* Titre sur la bannière */}
-          <div className="absolute inset-0 flex items-center justify-center px-4">
-            <h2 id="modal-title" className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg text-center">
+          {/* Titre sur la bannière (sous la croix, au-dessus de la bannière) */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-4">
+            <h2
+              id="modal-title"
+              className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg text-center"
+            >
               Créer une nouvelle liste 🎁
             </h2>
           </div>
@@ -152,9 +158,10 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                     disabled={loading}
                     className={`
                       relative p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all
-                      ${isSelected
-                        ? 'border-purple-600 bg-purple-50 shadow-lg scale-105'
-                        : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                      ${
+                        isSelected
+                          ? 'border-purple-600 bg-purple-50 shadow-lg scale-105'
+                          : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
                       }
                       ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
@@ -169,7 +176,9 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                       </div>
                     )}
                     <div className="text-center">
-                      <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">{themeData.label.split(' ')[1]}</div>
+                      <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">
+                        {themeData.label.split(' ')[1]}
+                      </div>
                       <div className={`text-xs font-medium ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
                         {themeData.label.split(' ')[0]}
                       </div>
@@ -198,9 +207,10 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                     disabled={loading}
                     className={`
                       w-full text-left p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all
-                      ${isSelected
-                        ? 'border-purple-600 bg-purple-50 shadow-md'
-                        : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                      ${
+                        isSelected
+                          ? 'border-purple-600 bg-purple-50 shadow-md'
+                          : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
                       }
                       ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
@@ -209,9 +219,11 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                     aria-label={`Visibilité ${visData.label}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'
-                      }`}>
+                      <div
+                        className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          isSelected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'
+                        }`}
+                      >
                         {isSelected && (
                           <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -219,7 +231,11 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className={`font-semibold mb-1 text-sm sm:text-base ${isSelected ? 'text-purple-700' : 'text-gray-900'}`}>
+                        <div
+                          className={`font-semibold mb-1 text-sm sm:text-base ${
+                            isSelected ? 'text-purple-700' : 'text-gray-900'
+                          }`}
+                        >
                           {visData.label}
                         </div>
                         <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">
@@ -251,8 +267,20 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   Création...
                 </span>

@@ -15,7 +15,7 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
 
   // ===== Promo mobile =====
   const promoBtnRef = useRef<HTMLButtonElement | null>(null);
-  const promoMeasureRef = useRef<HTMLSpanElement | null>(null); // mesure largeur "texte seul"
+  const promoMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [shouldMarquee, setShouldMarquee] = useState(false);
 
   useLayoutEffect(() => {
@@ -28,16 +28,13 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
     if (!btn || !measure) return;
 
     const recompute = () => {
-      // largeur dispo dans le bouton (on enlève une marge de sécu pour l’icône/gaps)
       const available = Math.max(0, btn.clientWidth - 24);
       const textW = measure.scrollWidth;
       setShouldMarquee(textW > available);
     };
 
-    // mesures initiales + reflow
     requestAnimationFrame(recompute);
 
-    // écoute les changements de taille
     const roBtn = new ResizeObserver(recompute);
     const roText = new ResizeObserver(recompute);
     roBtn.observe(btn);
@@ -71,7 +68,6 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
 
           {/* Colonne gauche : Image + Boutons */}
           <div className="flex-shrink-0 flex flex-col gap-2" style={{ width: '112px' }}>
-            {/* Image */}
             {item.image_url ? (
               <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
                 <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
@@ -82,7 +78,6 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
               </div>
             )}
 
-            {/* Boutons sous l'image */}
             <div className="flex flex-col gap-1.5">
               {item.url && (
                 <a
@@ -98,7 +93,6 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                 </a>
               )}
 
-              {/* ✅ Bouton promo mobile : PAS d’émoji, défilement seulement si overflow */}
               {item.promo_code && (
                 <button
                   ref={promoBtnRef}
@@ -109,12 +103,10 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                   title="Copier le code promo"
                   aria-live="polite"
                 >
-                  {/* Icône à gauche */}
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
 
-                  {/* Élément de mesure hors écran (texte simple, sans émoji) */}
                   <span
                     ref={promoMeasureRef}
                     className="absolute -left-[9999px] top-auto whitespace-nowrap font-mono"
@@ -122,14 +114,12 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                     {item.promo_code}
                   </span>
 
-                  {/* Masque / viewport du texte visible */}
                   <span className="flex-1 min-w-0 overflow-hidden">
                     {(() => {
                       const showMarquee = shouldMarquee && !copiedPromo;
                       const spacer = '\u00A0\u00A0•\u00A0\u00A0';
 
                       if (!showMarquee) {
-                        // Pas d’overflow : une seule copie, pas de séparateur, pas d’émoji
                         return (
                           <span className="inline-block font-mono truncate">
                             {copiedPromo ? 'Copié !' : item.promo_code}
@@ -137,12 +127,8 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                         );
                       }
 
-                      // Overflow : animation + duplication + séparateur (uniquement ici)
                       return (
-                        <span
-                          className="marquee-track marquee-duration-8s"
-                          style={{ willChange: 'transform' }}
-                        >
+                        <span className="marquee-track marquee-duration-8s" style={{ willChange: 'transform' }}>
                           <span className="inline-block font-mono whitespace-nowrap">
                             {item.promo_code}{spacer}
                           </span>
@@ -165,7 +151,6 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                 {item.title}
               </h4>
 
-              {/* Prix avec icône violette */}
               {item.price && (
                 <div className="flex items-center gap-1.5 text-purple-600 mb-2">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,7 +160,6 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                 </div>
               )}
 
-              {/* Priorité */}
               <div className="flex items-center gap-1.5 mb-2">
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${
@@ -186,16 +170,14 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                       : 'bg-gray-50 text-gray-600'
                   }`}
                 >
-                  {item.priority === 'haute' && '💡 Haute'}
-                  {item.priority === 'moyenne' && '💡 Moyenne'}
+                  {item.priority === 'haute' && '🔥 Haute'}
+                  {item.priority === 'moyenne' && '⚡ Moyenne'}
                   {item.priority === 'basse' && '💡 Basse'}
                 </span>
               </div>
 
-              {/* Description */}
               {item.note && <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.note}</p>}
 
-              {/* Taille / Couleur */}
               <div className="flex flex-wrap items-center gap-1.5">
                 {item.size && (
                   <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 rounded-md">📏 {item.size}</span>
@@ -206,15 +188,16 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
               </div>
             </div>
 
-            {/* Menu 3 points en bas à droite */}
             {isOwner && (
               <div className="flex justify-end mt-2">
                 <button
                   className={`p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition-all ${FOCUS_RING}`}
                   title="Options"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2z" />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <circle cx="12" cy="5" r="1.5" />
+                    <circle cx="12" cy="12" r="1.5" />
+                    <circle cx="12" cy="19" r="1.5" />
                   </svg>
                 </button>
               </div>
@@ -236,18 +219,25 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
         )}
 
         <div className="p-4 flex-1 flex flex-col">
-          <h4 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2">{item.title}</h4>
+          {/* 🔹 Titre + prix alignés */}
+          <div className="flex items-baseline justify-between gap-3 mb-2 min-w-0">
+            <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">
+              {item.title}
+            </h4>
+
+            {item.price && (
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">
+                  {item.price.toFixed(2)} €
+                </span>
+              </div>
+            )}
+          </div>
 
           {item.note && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.note}</p>}
-
-          {item.price && (
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-2xl font-bold text-purple-600">{item.price.toFixed(2)} €</span>
-            </div>
-          )}
 
           <div className="mb-3">
             <span
@@ -318,9 +308,13 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
               </a>
             )}
             {isOwner && (
-              <button className={`p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING} border border-gray-200`}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2z" />
+              <button
+                className={`p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING} border border-gray-200`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <circle cx="12" cy="5" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="19" r="1.5" />
                 </svg>
               </button>
             )}

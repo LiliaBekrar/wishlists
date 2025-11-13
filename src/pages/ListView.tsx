@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 ListView.tsx
 // 🧠 Rôle : Page de détail d'une liste avec items
 import { useEffect, useState } from 'react';
@@ -6,13 +5,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import { useItems } from '../hooks/useItems';
-import { FOCUS_RING, BANNER_HEIGHT } from '../utils/constants';
+import { FOCUS_RING, BANNER_HEIGHT, ITEM_SORT_OPTIONS } from '../utils/constants';
 import { BannerMap } from '../components/banners';
 import type { Wishlist } from '../hooks/useWishlists';
+import SortDropdown from '../components/SortDropdown';
+import FilterButtons, { type StatusFilter } from '../components/FilterButtons';
+import { sortItems, filterItemsByStatus } from '../utils/sorting';
 import AddItemModal from '../components/AddItemModal';
 import ItemCard from '../components/ItemCard';
 import ListStats from '../components/ListStats';
+import OwnerStats from '../components/OwnerStats';
 import Toast from '../components/Toast';
+import ShareModal from '../components/ShareModal';
 
 export default function ListView() {
   const { slug } = useParams<{ slug: string }>();
@@ -26,6 +30,24 @@ export default function ListView() {
   const { items, createItem } = useItems(wishlist?.id);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // États du tri et filtrage
+  const [sortBy, setSortBy] = useState('priority-desc');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('tous');
+
+  // Filtrer puis trier les items
+  const filteredItems = filterItemsByStatus(items, statusFilter);
+  const sortedItems = sortItems(filteredItems, sortBy);
+
+  // Compter les items par statut
+  const statusCounts = {
+    tous: items.length,
+    disponible: items.filter(i => i.status === 'disponible').length,
+    réservé: items.filter(i => i.status === 'réservé').length,
+    acheté: items.filter(i => i.status === 'acheté').length
+  };
+
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Charger la liste
   useEffect(() => {
@@ -67,6 +89,88 @@ export default function ListView() {
 
     fetchWishlist();
   }, [slug]);
+
+  // ⬅️ NOUVEAU : Gérer les utilisateurs invités
+  useEffect(() => {
+    const handleInvitedUser = async () => {
+      // Vérifier si l'URL contient ?invited=true
+      const urlParams = new URLSearchParams(window.location.search);
+      const isInvited = urlParams.get('invited') === 'true';
+
+      if (!isInvited || !wishlist?.id) return;
+
+      console.log('👤 Utilisateur invité détecté');
+
+      // Récupérer l'utilisateur connecté
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      if (!currentUser) {
+        console.log('❌ Pas d\'utilisateur connecté');
+        return;
+      }
+
+      console.log('✅ User connecté:', currentUser.id, currentUser.email);
+
+      // Vérifier s'il y a une invitation en attente pour cet email
+      const { data: invitation } = await supabase
+        .from('wishlist_members')
+        .select('id, status')
+        .eq('wishlist_id', wishlist.id)
+        .eq('email', currentUser.email)
+        .eq('status', 'invité')
+        .maybeSingle();
+
+      if (!invitation) {
+        console.log('❌ Pas d\'invitation valide trouvée');
+        setToast({
+          message: '❌ Aucune invitation trouvée pour cet email',
+          type: 'error'
+        });
+        // Nettoyer l'URL
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+
+      console.log('✅ Invitation trouvée, activation...');
+
+      // Activer l'invitation
+      const { error: updateError } = await supabase
+        .from('wishlist_members')
+        .update({
+          user_id: currentUser.id,
+          status: 'actif',
+        })
+        .eq('id', invitation.id);
+
+      if (updateError) {
+        console.error('❌ Erreur activation:', updateError);
+        setToast({
+          message: '❌ Erreur lors de l\'activation de l\'invitation',
+          type: 'error'
+        });
+        return;
+      }
+
+      console.log('✅ Invitation activée avec succès');
+
+      setToast({
+        message: '✅ Bienvenue ! Tu as rejoint la liste avec succès 🎉',
+        type: 'success'
+      });
+
+      // Nettoyer l'URL
+      window.history.replaceState({}, '', window.location.pathname);
+
+      // Recharger la page pour afficher les bonnes permissions
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    };
+
+    if (wishlist && wishlist.id) {
+      handleInvitedUser();
+    }
+  }, [wishlist?.id]);
 
   // Handler ajout item
   const handleAddItem = async (data: {
@@ -123,7 +227,6 @@ export default function ListView() {
     );
   }
 
-  // const themeData = THEMES[wishlist.theme];
   const BannerComponent = BannerMap[wishlist.theme];
   const isOwner = user?.id === wishlist.owner_id;
 
@@ -166,6 +269,18 @@ export default function ListView() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+
+        {/* Bouton Partager */}
+        <button
+          onClick={() => setIsShareModalOpen(true)}
+          className="absolute top-4 left-16 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
+          aria-label="Partager"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          <span className="hidden sm:inline">Partager</span>
+        </button>
       </div>
 
       {/* Contenu principal */}
@@ -175,43 +290,80 @@ export default function ListView() {
         <div className="backdrop-blur-xl bg-white/80 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8">
 
           {/* Actions header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                Cadeaux de la liste
-              </h2>
-              <p className="text-gray-600 text-sm">
-                {items.length} cadeau{items.length > 1 ? 'x' : ''} ajouté{items.length > 1 ? 's' : ''}
-              </p>
+          <div className="flex flex-col gap-4 mb-8 pb-6 border-b">
+            {/* Ligne 1 : Titre + Bouton ajouter */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                  Cadeaux de la liste
+                </h2>
+                <p className="text-gray-600 text-sm">
+                  {sortedItems.length} / {items.length} cadeau{items.length > 1 ? 'x' : ''}
+                </p>
+              </div>
+
+              {isOwner && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className={`inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all ${FOCUS_RING} whitespace-nowrap`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="hidden sm:inline">Ajouter un cadeau</span>
+                  <span className="sm:hidden">Ajouter</span>
+                </button>
+              )}
             </div>
 
-            {isOwner && (
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className={`inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all ${FOCUS_RING}`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Ajouter un cadeau</span>
-              </button>
+            {/* Ligne 2 : Filtres (viewers only) + Tri */}
+            {items.length > 0 && (
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                {/* Filtres pour viewers */}
+                {!isOwner && (
+                  <div className="flex-1">
+                    <FilterButtons
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      counts={statusCounts}
+                    />
+                  </div>
+                )}
+
+                {/* Tri */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600 font-medium whitespace-nowrap">Trier par :</span>
+                  <SortDropdown
+                    options={ITEM_SORT_OPTIONS}
+                    value={sortBy}
+                    onChange={setSortBy}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
           {/* Liste des items ou empty state */}
-          {items.length === 0 ? (
+          {sortedItems.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎁</div>
+              <div className="text-6xl mb-4">
+                {items.length === 0 ? '🎁' : '🔍'}
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Aucun cadeau pour le moment
+                {items.length === 0
+                  ? 'Aucun cadeau pour le moment'
+                  : 'Aucun résultat'
+                }
               </h3>
               <p className="text-gray-600 mb-6">
-                {isOwner
-                  ? 'Commence à ajouter tes envies de cadeaux !'
-                  : 'Le propriétaire de la liste n\'a pas encore ajouté de cadeaux.'
+                {items.length === 0
+                  ? (isOwner
+                      ? 'Commence à ajouter tes envies de cadeaux !'
+                      : 'Le propriétaire de la liste n\'a pas encore ajouté de cadeaux.')
+                  : 'Essaie de changer les filtres ou le tri.'
                 }
               </p>
-              {isOwner && (
+              {isOwner && items.length === 0 && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
                   className={`inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all ${FOCUS_RING}`}
@@ -224,8 +376,8 @@ export default function ListView() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {items.map((item) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {sortedItems.map((item) => (
                 <ItemCard key={item.id} item={item} isOwner={isOwner} />
               ))}
             </div>
@@ -233,9 +385,15 @@ export default function ListView() {
         </div>
 
         {/* Stats */}
-        <div className="mt-6">
-          <ListStats items={items} />
-        </div>
+        {items.length > 0 && (
+          <div className="mt-6">
+            {isOwner ? (
+              <OwnerStats items={items} />
+            ) : (
+              <ListStats items={items} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Toast */}
@@ -252,6 +410,16 @@ export default function ListView() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddItem}
+      />
+
+      {/* Modal partage */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        wishlistId={wishlist.id}
+        wishlistSlug={wishlist.slug}
+        wishlistName={wishlist.name}
+        visibility={wishlist.visibility}
       />
     </div>
   );
