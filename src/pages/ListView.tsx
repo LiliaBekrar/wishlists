@@ -416,7 +416,7 @@ export default function ListView() {
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        wishlistId={wishlist.id}
+        // wishlistId={wishlist.id}
         wishlistSlug={wishlist.slug}
         wishlistName={wishlist.name}
         visibility={wishlist.visibility}

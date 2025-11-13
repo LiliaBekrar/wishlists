@@ -6,37 +6,37 @@ import { useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuthStore } from "../store/authStore";
 import type { User } from "@supabase/supabase-js";
-
-// 👉 Si tu as déjà un type généré (Tables<"profiles">), importe-le à la place :
-type Profile = {
-  id: string;
-  email: string; // 🚨 non-nullable par choix produit
-  pseudo: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  slug: string | null;
-  is_public: boolean;
-  notifications_enabled: boolean;
-  created_at: string;
-};
+import type { Profile } from '../types/db';
 
 // Fallback unique et centralisé pour garantir un email string
 const safeEmail = (email?: string) => email ?? "no-email@wishlists.app";
 
 // Construit un "profile virtuel" cohérent avec ton schéma
 function buildVirtualProfile(user: User): Profile {
+  const meta = user.user_metadata as any;
+
+  const email = safeEmail(user.email); // ✅ jamais undefined
+
+  // On fabrique un display_name toujours string
+  const displayName =
+    meta?.pseudo ??
+    meta?.full_name ??
+    meta?.name ??
+    email.split('@')[0]; // fallback simple
+
   return {
     id: user.id,
-    email: safeEmail(user.email), // ✅ jamais undefined
-    pseudo: (user.user_metadata as any)?.pseudo ?? null,
-    bio: null,
-    avatar_url: (user.user_metadata as any)?.avatar_url ?? null,
-    slug: null,
-    is_public: false,
+    email,
+    display_name: displayName,      // ✅ string, pas null
+    avatar_url: meta?.avatar_url ?? null,
+    username: meta?.username ?? null,
+    bio: meta?.bio ?? null,
     notifications_enabled: true,
-    created_at: user.created_at, // string ISO
+    created_at: user.created_at,    // string ISO
+    updated_at: user.created_at,    // pour un virtual profile, on met la même
   };
 }
+
 
 export function useAuth() {
   const { user, loading, setUser, setLoading } = useAuthStore();

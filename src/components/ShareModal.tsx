@@ -28,6 +28,10 @@ export default function ShareModal({
 
   const shareUrl = `${window.location.origin}/list/${wishlistSlug}`;
 
+  // ✅ Détection propre du partage natif (évite l'erreur TS2774)
+  const hasNativeShare =
+    typeof navigator !== 'undefined' && 'share' in navigator;
+
   const getShareMessage = () => {
     const base = `🎁 ${wishlistName}\n\n`;
 
@@ -78,17 +82,17 @@ export default function ShareModal({
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `🎁 ${wishlistName}`,
-          text: getShareMessage(),
-        });
-        setToast({ message: '✅ Partagé !', type: 'success' });
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('❌ Erreur partage:', error);
-        }
+    if (!hasNativeShare) return;
+
+    try {
+      await (navigator as any).share({
+        title: `🎁 ${wishlistName}`,
+        text: getShareMessage(),
+      });
+      setToast({ message: '✅ Partagé !', type: 'success' });
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('❌ Erreur partage:', error);
       }
     }
   };
@@ -298,7 +302,7 @@ export default function ShareModal({
                 </button>
 
                 {/* Partage natif (mobile) */}
-                {navigator.share && (
+                {hasNativeShare && (
                   <button
                     onClick={handleNativeShare}
                     className={`flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg sm:rounded-xl transition-all ${FOCUS_RING} text-xs sm:text-sm`}
