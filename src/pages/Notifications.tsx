@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/Notifications.tsx
 // 🧠 Rôle : Page listant toutes les notifications avec actions

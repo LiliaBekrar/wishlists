@@ -7,6 +7,16 @@ import NotificationBadge from './NotificationBadge';
 
 export default function Header() {
   const { user, signOut } = useAuth();
+  const displayName =
+    user?.display_name || user?.username || user?.email.split('@')[0];
+
+  const initial =
+    (user?.display_name?.[0] ||
+      user?.username?.[0] ||
+      user?.email[0] ||
+      '?'
+    ).toUpperCase();
+
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200/50 shadow-sm">
@@ -42,10 +52,10 @@ export default function Header() {
 
                 <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {(user.pseudo?.[0] || user.email[0]).toUpperCase()}
+                    {initial}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {user.pseudo || user.email.split('@')[0]}
+                    {displayName}
                   </span>
                 </div>
 
