@@ -10,7 +10,7 @@ export interface SortOption {
 }
 
 interface SortDropdownProps {
-  options: SortOption[];
+  options: readonly SortOption[];
   value: string;
   onChange: (value: string) => void;
   label?: string;

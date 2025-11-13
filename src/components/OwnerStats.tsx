@@ -12,11 +12,11 @@ export default function OwnerStats({ items }: OwnerStatsProps) {
   const totalValue = items.reduce((sum, item) => sum + (item.price || 0), 0);
   const avgPrice = total > 0 ? totalValue / total : 0;
 
-  const byPriority = {
-    haute: items.filter(i => i.priority === 'haute').length,
-    moyenne: items.filter(i => i.priority === 'moyenne').length,
-    basse: items.filter(i => i.priority === 'basse').length
-  };
+  // const byPriority = {
+  //   haute: items.filter(i => i.priority === 'haute').length,
+  //   moyenne: items.filter(i => i.priority === 'moyenne').length,
+  //   basse: items.filter(i => i.priority === 'basse').length
+  // };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
