@@ -1,7 +1,7 @@
 // 📄 src/pages/AcceptInvite.tsx
 // 🧠 Rôle : Accepter invitation email (auto viewer pour listes privées)
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';

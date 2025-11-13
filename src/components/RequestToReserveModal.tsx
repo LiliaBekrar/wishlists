@@ -2,7 +2,7 @@
 // 📄 src/components/RequestToReserveModal.tsx
 // 🧠 Rôle : Modal "Pour réserver, rejoignez d'abord" pour listes PARTAGÉES
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Share2, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 

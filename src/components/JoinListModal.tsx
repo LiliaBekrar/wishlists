@@ -2,7 +2,7 @@
 // 📄 src/components/JoinListModal.tsx
 // 🧠 Rôle : Modal "Demander à rejoindre" pour listes PRIVÉES via lien direct
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Lock, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 

@@ -82,7 +82,8 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                Bonjour {user?.pseudo || user?.email?.split('@')[0]} !
+                Bonjour {user?.display_name || user?.username || user?.email.split('@')[0]}
+ !
               </span>
               <span className="ml-2">👋</span>
             </h1>
