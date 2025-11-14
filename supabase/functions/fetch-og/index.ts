@@ -1,8 +1,13 @@
-// supabase/functions/fetch-og/index.ts
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 function extractMeta(html: string, key: string): string | null {
-  // Cherche <meta property="og:title" ...> ou <meta name="og:title" ...>
   const regex = new RegExp(
     `<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']+)["'][^>]*>`,
     'i'
@@ -12,15 +17,11 @@ function extractMeta(html: string, key: string): string | null {
 }
 
 serve(async (req) => {
-  // CORS preflight
+  // ✅ Preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
+      headers: corsHeaders,
     });
   }
 
@@ -30,8 +31,8 @@ serve(async (req) => {
       {
         status: 405,
         headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
       }
     );
@@ -47,8 +48,8 @@ serve(async (req) => {
         {
           status: 400,
           headers: {
+            ...corsHeaders,
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
           },
         }
       );
@@ -57,7 +58,6 @@ serve(async (req) => {
     console.log('🔵 fetch-og — récupération de', url);
 
     const pageRes = await fetch(url, {
-      // User-Agent un peu "navigateur" pour éviter certains blocages
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
@@ -71,8 +71,8 @@ serve(async (req) => {
         {
           status: 502,
           headers: {
+            ...corsHeaders,
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
           },
         }
       );
@@ -94,7 +94,6 @@ serve(async (req) => {
       extractMeta(html, 'og:image') ||
       extractMeta(html, 'twitter:image');
 
-    // Tentative de récupération d'un prix (pas garanti)
     const priceStr =
       extractMeta(html, 'product:price:amount') ||
       extractMeta(html, 'og:price:amount') ||
@@ -114,8 +113,8 @@ serve(async (req) => {
     return new Response(JSON.stringify(payload), {
       status: 200,
       headers: {
+        ...corsHeaders,
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (err) {
@@ -125,8 +124,8 @@ serve(async (req) => {
       {
         status: 500,
         headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
       }
     );
