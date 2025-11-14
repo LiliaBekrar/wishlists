@@ -169,7 +169,6 @@ export function useListAccess(
             role: 'viewer',
             status: 'en_attente',
             approved: false,
-            joined_via_link: false,
             requested_at: new Date().toISOString(),
           },
           {

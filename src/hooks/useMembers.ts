@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 useMembers.ts
 // 🧠 Rôle : Hook pour gérer les membres d'une wishlist (CRUD) avec notifications
-// 🔧 Fix : Suppression avec clé composite (user_id + wishlist_id)
+// 🔧 Fix : Suppression avec clé composite (user_id + wishlist_id) + LOGS
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -20,7 +20,6 @@ export interface WishlistMember {
   profiles?: {
     username: string;
     display_name: string | null;
-    avatar_url: string | null;
     email?: string;
   };
 }
@@ -33,10 +32,12 @@ export function useMembers(wishlistId?: string) {
   // 📥 Charger les membres
   const fetchMembers = async () => {
     if (!wishlistId) {
-      console.warn('useMembers appelé sans wishlistId');
+      console.warn('⚠️ useMembers appelé sans wishlistId');
       setMembers([]);
       return;
     }
+
+    console.log('🔄 [useMembers.fetchMembers] start pour wishlistId =', wishlistId);
 
     setLoading(true);
     setError(null);
@@ -50,7 +51,6 @@ export function useMembers(wishlistId?: string) {
           profiles (
             username,
             display_name,
-            avatar_url,
             email
           )
         `
@@ -58,9 +58,9 @@ export function useMembers(wishlistId?: string) {
         .eq('wishlist_id', wishlistId)
         .order('joined_at', { ascending: true, nullsFirst: false });
 
-      if (fetchError) throw fetchError;
+      console.log('📥 [useMembers.fetchMembers] résultat brut =', { data, fetchError });
 
-      console.log('🔍 useMembers → wishlistId =', wishlistId, 'rows =', data);
+      if (fetchError) throw fetchError;
 
       const normalized =
         (data || []).map((row: any) => ({
@@ -68,9 +68,11 @@ export function useMembers(wishlistId?: string) {
           status: row.status === 'pending' ? 'pending' : 'accepted',
         })) as WishlistMember[];
 
+      console.log('✅ [useMembers.fetchMembers] normalized =', normalized);
+
       setMembers(normalized);
     } catch (err) {
-      console.error('❌ Erreur chargement membres:', err);
+      console.error('❌ [useMembers.fetchMembers] Erreur chargement membres:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
       setMembers([]);
     } finally {
@@ -80,6 +82,7 @@ export function useMembers(wishlistId?: string) {
 
   // 🔄 Recharger au montage ou si wishlistId change
   useEffect(() => {
+    console.log('🧷 [useMembers.useEffect] mount / wishlistId changé =', wishlistId);
     fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wishlistId]);
@@ -88,27 +91,35 @@ export function useMembers(wishlistId?: string) {
   const removeMember = async (userId: string) => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
-    console.log('🗑️ removeMember → userId =', userId, 'wishlistId =', wishlistId);
+    console.log('🗑️ [useMembers.removeMember] userId =', userId, 'wishlistId =', wishlistId);
 
     try {
       // 1) Récupérer les infos du membre avant suppression
-      const { data: member } = await supabase
+      const { data: member, error: memberError } = await supabase
         .from('wishlist_members')
         .select('user_id, wishlist_id, profiles(username, display_name)')
         .eq('user_id', userId) // ⬅️ FIX : user_id
         .eq('wishlist_id', wishlistId) // ⬅️ FIX : wishlist_id
         .single();
 
+      console.log('📥 [removeMember] membre trouvé =', { member, memberError });
+
+      if (memberError) {
+        console.error('❌ [removeMember] erreur get membre:', memberError);
+      }
+
       if (!member) {
         throw new Error('Membre introuvable');
       }
 
       // 2) Récupérer les infos de la wishlist
-      const { data: wishlist } = await supabase
+      const { data: wishlist, error: wishlistError } = await supabase
         .from('wishlists')
         .select('name')
         .eq('id', wishlistId)
         .single();
+
+      console.log('📥 [removeMember] wishlist =', { wishlist, wishlistError });
 
       // 3) Supprimer le membre (clé composite)
       const { error } = await supabase
@@ -117,7 +128,10 @@ export function useMembers(wishlistId?: string) {
         .eq('user_id', userId) // ⬅️ FIX : user_id
         .eq('wishlist_id', wishlistId); // ⬅️ FIX : wishlist_id
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [removeMember] delete error:', error);
+        throw error;
+      }
 
       // 4) 🔔 CRÉER UNE NOTIFICATION
       if (wishlist) {
@@ -133,12 +147,12 @@ export function useMembers(wishlistId?: string) {
         });
       }
 
-      console.log('✅ Membre retiré et notifié');
+      console.log('✅ [removeMember] Membre retiré et notifié');
 
       // 5) Recharger
       await fetchMembers();
     } catch (err) {
-      console.error('❌ removeMember → Erreur:', err);
+      console.error('❌ [removeMember] Erreur:', err);
       throw err;
     }
   };
@@ -147,13 +161,18 @@ export function useMembers(wishlistId?: string) {
   const updateRole = async (userId: string, newRole: 'owner' | 'viewer') => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
+    console.log('♻️ [updateRole] userId =', userId, 'newRole =', newRole, 'wishlistId =', wishlistId);
+
     const { error } = await supabase
       .from('wishlist_members')
       .update({ role: newRole })
       .eq('user_id', userId)
       .eq('wishlist_id', wishlistId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [updateRole] error:', error);
+      throw error;
+    }
 
     await fetchMembers();
   };
@@ -162,7 +181,7 @@ export function useMembers(wishlistId?: string) {
   const acceptMember = async (userId: string) => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
-    console.log('✅ acceptMember → userId =', userId, 'wishlistId =', wishlistId);
+    console.log('✅ [acceptMember] userId =', userId, 'wishlistId =', wishlistId);
 
     const { error } = await supabase
       .from('wishlist_members')
@@ -170,7 +189,10 @@ export function useMembers(wishlistId?: string) {
       .eq('user_id', userId)
       .eq('wishlist_id', wishlistId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [acceptMember] error:', error);
+      throw error;
+    }
 
     await fetchMembers();
   };
