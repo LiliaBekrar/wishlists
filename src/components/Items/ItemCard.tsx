@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// 📄 ItemCard.tsx
+// 📄 src/components/Items/ItemCard.tsx
 // 🧠 Rôle : Card avec menu 3 points inline + ClaimActionButton
+
 import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { FOCUS_RING } from '../../utils/constants';
 import type { Item } from '../../hooks/useItems';
@@ -13,12 +15,16 @@ interface ItemCardProps {
   wishlistId: string;
   onDelete?: (id: string) => void;
   onEdit?: (item: Item) => void;
+  onClaimChange?: () => void;
+  onToast?: (toast: { message: string; type: 'success' | 'error' }) => void;
 }
 
 export default function ItemCard({
   item,
   isOwner,
   canClaim = false,
+  onClaimChange,
+  onToast,
   wishlistId,
   onDelete,
   onEdit,
@@ -247,7 +253,6 @@ export default function ItemCard({
 
             {/* Boutons actions MOBILE */}
             <div className="flex justify-end mt-2 gap-1.5 items-center">
-              {/* ⬅️ ClaimActionButton (version mobile compacte) */}
               <div className="flex-1">
                 <ClaimActionButton
                   item={item}
@@ -255,10 +260,11 @@ export default function ItemCard({
                   isOwner={isOwner}
                   canClaim={canClaim}
                   compact={true}
+                  onToast={onToast}
+                  onAction={onClaimChange}
                 />
               </div>
 
-              {/* Menu owner */}
               {isOwner && (
                 <div className="relative" ref={menuRef}>
                   <button
@@ -338,7 +344,9 @@ export default function ItemCard({
                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">{item.price.toFixed(2)} €</span>
+                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">
+                  {item.price.toFixed(2)} €
+                </span>
               </div>
             )}
           </div>
@@ -420,16 +428,16 @@ export default function ItemCard({
               </a>
             )}
 
-            {/* ⬅️ ClaimActionButton (version desktop) */}
             <ClaimActionButton
               item={item}
               wishlistId={wishlistId}
               isOwner={isOwner}
               canClaim={canClaim}
               compact={false}
+              onToast={onToast}
+              onAction={onClaimChange}
             />
 
-            {/* Menu owner */}
             {isOwner && (
               <div className="relative" ref={menuRef}>
                 <button

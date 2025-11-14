@@ -41,7 +41,7 @@ export interface Item {
   wishlist_id: string;
   title: string;
   description: string | null;
-  price: number | null;
+  price: number;
   currency: string;
   url: string | null;
   image_url: string | null;

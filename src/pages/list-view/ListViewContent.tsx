@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/list-view/ListViewContent.tsx
 // 🧠 Rôle : Contenu principal avec tri, filtres et items
 
@@ -13,8 +14,7 @@ import AddItemModal from '../../components/Items/AddItemModal';
 import ItemCard from '../../components/Items/ItemCard';
 import ListStats from '../../components/Lists/ListStats';
 import OwnerStats from '../../components/OwnerStats';
-import { useItems } from '../../hooks/useItems';
-import { supabase } from '../../lib/supabaseClient'; // ⬅️ AJOUT
+import { supabase } from '../../lib/supabaseClient';
 
 interface Props {
   wishlist: Wishlist;
@@ -22,42 +22,7 @@ interface Props {
   isOwner: boolean;
   canClaim: boolean;
   onToast: (toast: { message: string; type: 'success' | 'error' }) => void;
-}
-
-export default function ListViewContent({
-  wishlist,
-  items,
-  isOwner,
-  canClaim,
-  onToast,
-}: Props) {
-  const { createItem } = useItems(wishlist.id);
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // ⬅️ AJOUT : Modal d'édition
-  const [editModal, setEditModal] = useState<{ open: boolean; item: Item | null }>({
-    open: false,
-    item: null,
-  });
-
-  const [sortBy, setSortBy] = useState('priority-desc');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('tous');
-
-  // Filtrer puis trier
-  const filteredItems = filterItemsByStatus(items, statusFilter);
-  const sortedItems = sortItems(filteredItems, sortBy);
-
-  // Compter par statut
-  const statusCounts = {
-    tous: items.length,
-    disponible: items.filter((i) => i.status === 'disponible').length,
-    réservé: items.filter((i) => i.status === 'réservé').length,
-    acheté: items.filter((i) => i.status === 'acheté').length,
-  };
-
-  // Handler ajout item
-  const handleAddItem = async (data: {
+  onAddItem: (data: {
     name: string;
     description: string;
     url: string;
@@ -67,9 +32,53 @@ export default function ListViewContent({
     size: string;
     color: string;
     promo_code: string;
+  }) => Promise<any>;
+  onDeleteItem: (itemId: string) => Promise<void>;
+  onRefetchItems: () => Promise<void>;
+}
+
+export default function ListViewContent({
+  wishlist,
+  items,
+  isOwner,
+  canClaim,
+  onToast,
+  onAddItem,
+  onDeleteItem,
+  onRefetchItems,
+}: Props) {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const [editModal, setEditModal] = useState<{ open: boolean; item: Item | null }>({
+    open: false,
+    item: null,
+  });
+
+  const [sortBy, setSortBy] = useState('priority-desc');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('tous');
+
+  const filteredItems = filterItemsByStatus(items, statusFilter);
+  const sortedItems = sortItems(filteredItems, sortBy);
+
+  const statusCounts = {
+    tous: items.length,
+    disponible: items.filter((i) => i.status === 'disponible').length,
+    réservé: items.filter((i) => i.status === 'réservé').length,
+  };
+
+  const handleAddItem = async (data: {
+    name: string;
+    description: string;
+    url: string;
+    image_url: string;
+    price: number | null;
+    priority: 'basse' | 'moyenne' | 'haute';
+    size: string;
+    color: string;
+    promo_code: string;
   }) => {
     try {
-      await createItem(data);
+      await onAddItem(data);
       onToast({ message: '✅ Cadeau ajouté avec succès !', type: 'success' });
     } catch (error) {
       console.error('❌ Erreur:', error);
@@ -77,7 +86,6 @@ export default function ListViewContent({
     }
   };
 
-  // ⬅️ AJOUT : Handler édition item
   const handleEditItem = async (data: {
     name: string;
     description: string;
@@ -112,25 +120,17 @@ export default function ListViewContent({
       onToast({ message: '✅ Cadeau modifié !', type: 'success' });
       setEditModal({ open: false, item: null });
 
-      // Recharger la page pour voir les changements
-      setTimeout(() => window.location.reload(), 1000);
+      await onRefetchItems();
     } catch (error) {
       console.error('❌ Erreur:', error);
       onToast({ message: '❌ Erreur lors de la modification', type: 'error' });
     }
   };
 
-  // ⬅️ AJOUT : Handler suppression item
   const handleDeleteItem = async (itemId: string) => {
     try {
-      const { error } = await supabase.from('items').delete().eq('id', itemId);
-
-      if (error) throw error;
-
+      await onDeleteItem(itemId);
       onToast({ message: '✅ Cadeau supprimé', type: 'success' });
-
-      // Recharger la page
-      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error('❌ Erreur:', error);
       onToast({ message: '❌ Erreur lors de la suppression', type: 'error' });
@@ -169,11 +169,7 @@ export default function ListViewContent({
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {!isOwner && (
                   <div className="flex-1">
-                    <FilterButtons
-                      value={statusFilter}
-                      onChange={setStatusFilter}
-                      counts={statusCounts}
-                    />
+                    <FilterButtons value={statusFilter} onChange={setStatusFilter} counts={statusCounts} />
                   </div>
                 )}
 
@@ -220,8 +216,10 @@ export default function ListViewContent({
                   isOwner={isOwner}
                   canClaim={canClaim}
                   wishlistId={wishlist.id}
-                  onDelete={handleDeleteItem} // ⬅️ AJOUT
-                  onEdit={(item) => setEditModal({ open: true, item })} // ⬅️ AJOUT
+                  onDelete={handleDeleteItem}
+                  onEdit={(item) => setEditModal({ open: true, item })}
+                  onClaimChange={onRefetchItems}
+                  onToast={onToast}
                 />
               ))}
             </div>
@@ -234,9 +232,13 @@ export default function ListViewContent({
       </div>
 
       {/* Modal ajout */}
-      <AddItemModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddItem} />
+      <AddItemModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddItem}
+      />
 
-      {/* ⬅️ AJOUT : Modal édition */}
+      {/* Modal édition */}
       {editModal.item && (
         <AddItemModal
           isOpen={editModal.open}
@@ -248,7 +250,7 @@ export default function ListViewContent({
             description: editModal.item.note || '',
             url: editModal.item.url || '',
             image_url: editModal.item.image_url || '',
-            price: editModal.item.price,
+            price: editModal.item.price ?? null,
             priority: editModal.item.priority,
             size: editModal.item.size || '',
             color: editModal.item.color || '',
