@@ -2,18 +2,20 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 ListView.tsx
-// 🧠 Rôle : Page de détail d'une liste avec gestion des accès + membres
+// 🧠 Rôle : Page de détail d'une liste avec gestion des accès + membres + quitter
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import { useItems } from '../hooks/useItems';
+import { useMembers } from '../hooks/useMembers';
 import { BannerMap } from '../components/banners';
 import type { Wishlist } from '../hooks/useWishlists';
 import Toast from '../components/Toast';
 import ShareModal from '../components/Lists/ShareModal';
 import ManageMembersModal from '../components/Lists/ManageMembersModal';
+import LeaveListModal from '../components/Lists/LeaveListModal';
 import { useListAccess } from './list-view/useListAccess';
 import AccessDeniedScreen from './list-view/AccessDeniedScreen';
 import AccessPendingScreen from './list-view/AccessPendingScreen';
@@ -31,6 +33,7 @@ export default function ListView() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
   const {
     items,
@@ -46,7 +49,21 @@ export default function ListView() {
     user?.id
   );
 
-  // 🔔 Realtime : Écouter les changements de membres
+  const { leaveMembership, loading: leavingList } = useMembers(wishlist?.id);
+
+  // Valeurs mémoïsées pour éviter les re-renders
+  const isOwner = useMemo(() => user?.id === wishlist?.owner_id, [user?.id, wishlist?.owner_id]);
+  const isMember = useMemo(() => accessStatus === 'granted', [accessStatus]);
+  const canClaim = useMemo(
+    () => {
+      if (accessStatus === 'granted') return true;
+      if (accessStatus === 'guest' && wishlist?.visibility === 'publique') return true;
+      return false;
+    },
+    [accessStatus, wishlist?.visibility]
+  );
+
+  // Realtime : Écouter les changements de membres
   useEffect(() => {
     if (!wishlist || !user) return;
 
@@ -72,7 +89,7 @@ export default function ListView() {
     };
   }, [wishlist?.id, user?.id]);
 
-  // 📥 Charger la wishlist
+  // Charger la wishlist
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!slug) {
@@ -104,7 +121,7 @@ export default function ListView() {
     fetchWishlist();
   }, [slug]);
 
-  // 📤 Handler demande d'accès
+  // Handler demande d'accès
   const handleRequestAccessWithToast = async () => {
     try {
       await handleRequestAccess();
@@ -121,7 +138,28 @@ export default function ListView() {
     }
   };
 
-  // 🔄 Loading
+  // Handler quitter la liste
+  const handleLeaveList = async () => {
+    if (!wishlist || !user) return;
+
+    try {
+      await leaveMembership(user.id);
+      setToast({ message: '✅ Tu as quitté la liste', type: 'success' });
+      setIsLeaveModalOpen(false);
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    } catch (error: any) {
+      console.error('❌ Erreur:', error);
+      setToast({
+        message: error.message || '❌ Erreur lors de la sortie',
+        type: 'error',
+      });
+    }
+  };
+
+  // Loading
   if (loading || itemsLoading || accessStatus === 'checking') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -140,7 +178,7 @@ export default function ListView() {
     );
   }
 
-  // ❌ Erreur
+  // Erreur
   if (error || !wishlist) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 flex items-center justify-center px-4">
@@ -161,7 +199,7 @@ export default function ListView() {
 
   const BannerComponent = BannerMap[wishlist.theme];
 
-  // 🚫 Accès refusé
+  // Accès refusé
   if (accessStatus === 'denied') {
     return (
       <>
@@ -184,40 +222,36 @@ export default function ListView() {
     );
   }
 
-  // ⏳ Accès en attente
+  // Accès en attente
   if (accessStatus === 'pending') {
     return <AccessPendingScreen BannerComponent={BannerComponent} />;
   }
 
-  // ✅ Permissions
-  const isOwner = user?.id === wishlist.owner_id;
-  const canClaim = accessStatus === 'granted' || (accessStatus === 'guest' && wishlist.visibility === 'publique');
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      {/* Header avec bouton gérer membres */}
       <ListViewHeader
         wishlist={wishlist}
-        isOwner={isOwner} // ⬅️ NOUVEAU
+        isOwner={isOwner}
+        isMember={isMember}
         onBack={() => navigate('/dashboard')}
         onShare={() => setIsShareModalOpen(true)}
-        onManageMembers={() => setIsManageMembersOpen(true)} // ⬅️ NOUVEAU
+        onManageMembers={() => setIsManageMembersOpen(true)}
+        onLeaveList={() => setIsLeaveModalOpen(true)}
         BannerComponent={BannerComponent}
       />
 
-      {/* Contenu de la liste */}
-      <ListViewContent
-        wishlist={wishlist}
-        items={items}
-        isOwner={isOwner}
-        canClaim={canClaim}
-        onToast={setToast}
-        onAddItem={createItem}
-        onDeleteItem={deleteItem}
-        onRefetchItems={fetchItems}
-      />
+    <ListViewContent
+      wishlist={wishlist}
+      items={items}
+      isOwner={isOwner}
+      canClaim={canClaim}
+      onToast={setToast}
+      onRequestAccess={handleRequestAccessWithToast} // ⬅️ AJOUTER CETTE LIGNE
+      onAddItem={createItem}
+      onDeleteItem={deleteItem}
+      onRefetchItems={fetchItems}
+    />
 
-      {/* Toast notifications */}
       {toast && (
         <Toast
           message={toast.message}
@@ -226,7 +260,6 @@ export default function ListView() {
         />
       )}
 
-      {/* Modal partager */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
@@ -235,7 +268,6 @@ export default function ListView() {
         visibility={wishlist.visibility}
       />
 
-      {/* ⬅️ NOUVEAU : Modal gérer membres */}
       {isManageMembersOpen && (
         <ManageMembersModal
           isOpen={isManageMembersOpen}
@@ -244,6 +276,14 @@ export default function ListView() {
           isOwner={isOwner}
         />
       )}
+
+      <LeaveListModal
+        isOpen={isLeaveModalOpen}
+        wishlistName={wishlist.name}
+        onConfirm={handleLeaveList}
+        onCancel={() => setIsLeaveModalOpen(false)}
+        loading={leavingList}
+      />
     </div>
   );
 }
