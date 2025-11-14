@@ -25,16 +25,17 @@ function buildVirtualProfile(user: User): Profile {
     email.split('@')[0]; // fallback simple
 
   return {
-    id: user.id,
-    email,
-    display_name: displayName,      // ✅ string, pas null
-    avatar_url: meta?.avatar_url ?? null,
-    username: meta?.username ?? null,
-    bio: meta?.bio ?? null,
-    notifications_enabled: true,
-    created_at: user.created_at,    // string ISO
-    updated_at: user.created_at,    // pour un virtual profile, on met la même
-  };
+  id: user.id,
+  email,
+  display_name: displayName, // ✅ string, pas null
+  avatar_url: meta?.avatar_url ?? null,
+  username: meta?.username ?? null,
+  bio: meta?.bio ?? null,
+  notifications_enabled: true,
+  created_at: user.created_at, // string ISO
+  updated_at: user.created_at,
+  user_metadata: undefined,
+};
 }
 
 

@@ -1,22 +1,50 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 ItemCard.tsx
-// 🧠 Rôle : Card stylée adaptative (horizontal mobile moderne, vertical desktop)
-import { useLayoutEffect, useRef, useState } from 'react';
-import { FOCUS_RING } from '../utils/constants';
-import type { Item } from '../hooks/useItems';
+// 🧠 Rôle : Card avec menu 3 points inline + ClaimActionButton
+import { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { FOCUS_RING } from '../../utils/constants';
+import type { Item } from '../../hooks/useItems';
+import ClaimActionButton from '../Items/ClaimActionButton';
 
 interface ItemCardProps {
   item: Item;
   isOwner: boolean;
+  canClaim?: boolean;
+  wishlistId: string;
   onDelete?: (id: string) => void;
+  onEdit?: (item: Item) => void;
 }
 
-export default function ItemCard({ item, isOwner }: ItemCardProps) {
+export default function ItemCard({
+  item,
+  isOwner,
+  canClaim = false,
+  wishlistId,
+  onDelete,
+  onEdit,
+}: ItemCardProps) {
   const [copiedPromo, setCopiedPromo] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // ===== Promo mobile =====
+  // Promo mobile
   const promoBtnRef = useRef<HTMLButtonElement | null>(null);
   const promoMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [shouldMarquee, setShouldMarquee] = useState(false);
+
+  // ⬅️ Fermer le menu au clic extérieur
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   useLayoutEffect(() => {
     if (!item.promo_code) {
@@ -34,12 +62,10 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
     };
 
     requestAnimationFrame(recompute);
-
     const roBtn = new ResizeObserver(recompute);
     const roText = new ResizeObserver(recompute);
     roBtn.observe(btn);
     roText.observe(measure);
-
     window.addEventListener('load', recompute);
     return () => {
       roBtn.disconnect();
@@ -59,13 +85,23 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
     }
   };
 
+  const handleEdit = () => {
+    setMenuOpen(false);
+    onEdit?.(item);
+  };
+
+  const handleDelete = () => {
+    setMenuOpen(false);
+    if (confirm(`Supprimer "${item.title}" ?\nCette action est irréversible.`)) {
+      onDelete?.(item.id);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gray-100 transition-all">
-
       {/* ═════════════════════════ MOBILE (< md) ═════════════════════════ */}
       <div className="md:hidden">
         <div className="flex gap-4 p-4">
-
           {/* Colonne gauche : Image + Boutons */}
           <div className="flex-shrink-0 flex flex-col gap-2" style={{ width: '112px' }}>
             {item.image_url ? (
@@ -87,7 +123,12 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                   className={`flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${FOCUS_RING} shadow-sm`}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
                   </svg>
                   Voir
                 </a>
@@ -103,8 +144,19 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                   title="Copier le code promo"
                   aria-live="polite"
                 >
-                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  <svg
+                    className="w-3.5 h-3.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
                   </svg>
 
                   <span
@@ -130,10 +182,12 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                       return (
                         <span className="marquee-track marquee-duration-8s" style={{ willChange: 'transform' }}>
                           <span className="inline-block font-mono whitespace-nowrap">
-                            {item.promo_code}{spacer}
+                            {item.promo_code}
+                            {spacer}
                           </span>
                           <span className="inline-block font-mono whitespace-nowrap">
-                            {item.promo_code}{spacer}
+                            {item.promo_code}
+                            {spacer}
                           </span>
                         </span>
                       );
@@ -147,14 +201,17 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
           {/* Colonne droite : Contenu */}
           <div className="flex-1 min-w-0 flex flex-col justify-between">
             <div>
-              <h4 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2">
-                {item.title}
-              </h4>
+              <h4 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2">{item.title}</h4>
 
               {item.price && (
                 <div className="flex items-center gap-1.5 text-purple-600 mb-2">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <span className="font-bold text-lg">{item.price.toFixed(2)} €</span>
                 </div>
@@ -188,20 +245,69 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
               </div>
             </div>
 
-            {isOwner && (
-              <div className="flex justify-end mt-2">
-                <button
-                  className={`p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition-all ${FOCUS_RING}`}
-                  title="Options"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <circle cx="12" cy="5" r="1.5" />
-                    <circle cx="12" cy="12" r="1.5" />
-                    <circle cx="12" cy="19" r="1.5" />
-                  </svg>
-                </button>
+            {/* Boutons actions MOBILE */}
+            <div className="flex justify-end mt-2 gap-1.5 items-center">
+              {/* ⬅️ ClaimActionButton (version mobile compacte) */}
+              <div className="flex-1">
+                <ClaimActionButton
+                  item={item}
+                  wishlistId={wishlistId}
+                  isOwner={isOwner}
+                  canClaim={canClaim}
+                  compact={true}
+                />
               </div>
-            )}
+
+              {/* Menu owner */}
+              {isOwner && (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className={`p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition-all ${FOCUS_RING}`}
+                    title="Options"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                      <circle cx="12" cy="5" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="12" cy="19" r="1.5" />
+                    </svg>
+                  </button>
+
+                  {menuOpen && (
+                    <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-2xl border border-gray-200 py-1 z-50">
+                      <button
+                        onClick={handleEdit}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                        Modifier
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-all flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -219,20 +325,20 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
         )}
 
         <div className="p-4 flex-1 flex flex-col">
-          {/* 🔹 Titre + prix alignés */}
           <div className="flex items-baseline justify-between gap-3 mb-2 min-w-0">
-            <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">
-              {item.title}
-            </h4>
+            <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">{item.title}</h4>
 
             {item.price && (
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">
-                  {item.price.toFixed(2)} €
-                </span>
+                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">{item.price.toFixed(2)} €</span>
               </div>
             )}
           </div>
@@ -286,7 +392,12 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                       {item.promo_code}
                     </>
@@ -296,6 +407,7 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
             </div>
           )}
 
+          {/* Boutons DESKTOP */}
           <div className="flex gap-2 mt-auto">
             {item.url && (
               <a
@@ -307,16 +419,63 @@ export default function ItemCard({ item, isOwner }: ItemCardProps) {
                 Voir le produit
               </a>
             )}
+
+            {/* ⬅️ ClaimActionButton (version desktop) */}
+            <ClaimActionButton
+              item={item}
+              wishlistId={wishlistId}
+              isOwner={isOwner}
+              canClaim={canClaim}
+              compact={false}
+            />
+
+            {/* Menu owner */}
             {isOwner && (
-              <button
-                className={`p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING} border border-gray-200`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                  <circle cx="12" cy="5" r="1.5" />
-                  <circle cx="12" cy="12" r="1.5" />
-                  <circle cx="12" cy="19" r="1.5" />
-                </svg>
-              </button>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className={`p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING} border border-gray-200`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <circle cx="12" cy="5" r="1.5" />
+                    <circle cx="12" cy="12" r="1.5" />
+                    <circle cx="12" cy="19" r="1.5" />
+                  </svg>
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-3"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                      Modifier
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-all flex items-center gap-3"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      Supprimer
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

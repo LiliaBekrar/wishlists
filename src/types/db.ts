@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/types/db.ts
 // 🧠 Rôle : Types TypeScript de base
-// 📄 src/types/db.ts
-// 🧠 Rôle : Types TypeScript complets pour toute l'application
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 // ⚙️ PROFILES
 export interface Profile {
+  user_metadata: any;
   id: string;
   email: string;
   display_name: string;
