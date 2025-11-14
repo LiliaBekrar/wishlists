@@ -9,6 +9,7 @@ import ListView from './pages/ListView';
 import Dashboard from './pages/Dashboard';
 import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
+import Privacy from './pages/Privacy';
 
 // ⬅️ Détecter l'environnement pour le basename
 const basename = import.meta.env.MODE === 'production' ? '/wishlists' : '';
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="list/:slug" element={<ListView />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route
               path="/dashboard"
               element={
