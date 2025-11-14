@@ -25,28 +25,25 @@ export default function ListView() {
   const { user } = useAuth();
 
   const [wishlist, setWishlist] = useState<Wishlist | null>(null);
-  const [loading, setLoading] = useState(true); // chargement de la wishlist
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // 🔁 Items + actions via hook
   const {
     items,
     loading: itemsLoading,
-    error: itemsError,
+    error: _itemsError,
     fetchItems,
     createItem,
     deleteItem,
   } = useItems(wishlist?.id);
 
-  // ⬅️ Hook custom pour gérer l'accès
   const { accessStatus, requestSending, handleRequestAccess, refreshAccess } = useListAccess(
     wishlist,
     user?.id
   );
 
-  // ⬅️ Écouter les changements de statut dans wishlist_members
   useEffect(() => {
     if (!wishlist || !user) return;
 
@@ -62,7 +59,6 @@ export default function ListView() {
         },
         (payload) => {
           console.log('🔔 Mise à jour membre:', payload);
-          // Refresh l'accès quand le statut change
           refreshAccess();
         }
       )
@@ -73,7 +69,6 @@ export default function ListView() {
     };
   }, [wishlist?.id, user?.id]);
 
-  // Charger la wishlist
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!slug) {
@@ -105,7 +100,6 @@ export default function ListView() {
     fetchWishlist();
   }, [slug]);
 
-  // ⬅️ Wrapper pour la demande d'accès avec gestion d'erreur
   const handleRequestAccessWithToast = async () => {
     try {
       await handleRequestAccess();
@@ -122,7 +116,6 @@ export default function ListView() {
     }
   };
 
-  // Loading (wishlist + items + access)
   if (loading || itemsLoading || accessStatus === 'checking') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -141,7 +134,6 @@ export default function ListView() {
     );
   }
 
-  // Error
   if (error || !wishlist) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 flex items-center justify-center px-4">
@@ -162,7 +154,6 @@ export default function ListView() {
 
   const BannerComponent = BannerMap[wishlist.theme];
 
-  // ⬅️ ÉCRANS D'ACCÈS RESTREINT
   if (accessStatus === 'denied') {
     return (
       <>
@@ -189,7 +180,6 @@ export default function ListView() {
     return <AccessPendingScreen BannerComponent={BannerComponent} />;
   }
 
-  // ⬅️ AFFICHAGE NORMAL
   const isOwner = user?.id === wishlist.owner_id;
   const canClaim = accessStatus === 'granted' || (accessStatus === 'guest' && wishlist.visibility === 'publique');
 
@@ -214,14 +204,11 @@ export default function ListView() {
       />
 
       {toast && (
-        <>
-          {console.log('[ListView] Toast affiché', toast)}
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        </>
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
       <ShareModal
