@@ -134,35 +134,40 @@ export default function AddItemModal({
     }
   };
 
-  // Fetch Open Graph
+// Fetch Open Graph via Edge Function Supabase
   const handleFetchOG = async () => {
     if (!url.trim()) return;
 
     setFetchingOG(true);
 
     try {
-      console.log('🔵 Fetch Open Graph pour:', url);
+      console.log('🔵 Fetch Open Graph via edge function pour:', url);
 
-      // Appel à une API Open Graph (il faudra créer une edge function plus tard)
-      const response = await fetch(
-        `https://opengraph.io/api/1.1/site/${encodeURIComponent(url)}?app_id=YOUR_APP_ID`
-      );
+      const { data, error } = await supabase.functions.invoke('fetch-og', {
+        body: { url },
+      });
 
-      if (!response.ok) {
-        throw new Error('Erreur fetch Open Graph');
+      if (error) {
+        console.error('❌ Erreur edge function:', error);
+        throw new Error('Erreur lors de la récupération des métadonnées');
       }
 
-      const data = await response.json();
+      if (!data) {
+        throw new Error('Aucune donnée retournée');
+      }
 
-      // Remplir automatiquement les champs
-      if (data.hybridGraph?.title) setName(data.hybridGraph.title);
-      if (data.hybridGraph?.description) setDescription(data.hybridGraph.description);
-      if (data.hybridGraph?.image) setImageUrl(data.hybridGraph.image);
+      // data = { title, description, image, price }
+      if (data.title && !name) setName(data.title);
+      if (data.description && !description) setDescription(data.description);
+      if (data.image && !imageUrl) setImageUrl(data.image);
+      if (typeof data.price === 'number' && !price) {
+        setPrice(String(data.price));
+      }
 
-      console.log('✅ Open Graph récupéré:', data);
+      console.log('✅ Open Graph récupéré via edge:', data);
     } catch (error) {
       console.error('❌ Erreur fetch OG:', error);
-      alert('Impossible de récupérer les informations automatiquement. Remplis les champs manuellement.');
+      alert("Impossible de récupérer les infos automatiquement. Remplis les champs manuellement.");
     } finally {
       setFetchingOG(false);
     }
