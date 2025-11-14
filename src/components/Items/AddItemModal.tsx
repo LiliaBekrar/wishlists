@@ -163,6 +163,9 @@ export default function AddItemModal({
       if (typeof data.price === 'number' && !price) {
         setPrice(String(data.price));
       }
+      if (data.color && !color) setColor(data.color);
+      if (data.size && !size) setSize(data.size);
+
 
       console.log('✅ Open Graph récupéré via edge:', data);
     } catch (error) {
