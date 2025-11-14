@@ -1,21 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/list-view/ListViewHeader.tsx
-// 🧠 Rôle : Header avec bannière, titre et boutons
+// 🧠 Rôle : Header avec bannière, titre et boutons (+ gérer membres)
 
 import { BANNER_HEIGHT } from '../../utils/constants';
 import type { Wishlist } from '../../hooks/useWishlists';
 
 interface Props {
   wishlist: Wishlist;
+  isOwner: boolean; // ⬅️ NOUVEAU : pour afficher le bouton uniquement si owner
   onBack: () => void;
   onShare: () => void;
+  onManageMembers: () => void; // ⬅️ NOUVEAU
   BannerComponent: React.ComponentType<any>;
 }
 
 export default function ListViewHeader({
   wishlist,
+  isOwner,
   onBack,
   onShare,
+  onManageMembers,
   BannerComponent,
 }: Props) {
   return (
@@ -38,35 +42,64 @@ export default function ListViewHeader({
 
       {/* Badge visibilité */}
       <div className="absolute top-4 right-4">
-        <span className="px-3 py-1.5 bg-white/90 backdrop-blur text-sm font-medium rounded-full text-gray-700">
+        <span className="px-3 py-1.5 bg-white/90 backdrop-blur text-sm font-medium rounded-full text-gray-700 shadow-md">
           {wishlist.visibility === 'privée' && '🔒 Privée'}
           {wishlist.visibility === 'partagée' && '🔗 Partagée'}
           {wishlist.visibility === 'publique' && '🌍 Publique'}
         </span>
       </div>
 
-      {/* Bouton retour */}
-      <button
-        onClick={onBack}
-        className="absolute top-4 left-4 p-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-110"
-        aria-label="Retour"
-      >
-        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+      {/* Boutons en haut à gauche */}
+      <div className="absolute top-4 left-4 flex items-center gap-2">
+        {/* Bouton retour */}
+        <button
+          onClick={onBack}
+          className="p-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-110"
+          aria-label="Retour"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-      {/* Bouton partager */}
-      <button
-        onClick={onShare}
-        className="absolute top-4 left-16 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
-        aria-label="Partager"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-        </svg>
-        <span className="hidden sm:inline">Partager</span>
-      </button>
+        {/* Bouton partager */}
+        <button
+          onClick={onShare}
+          className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
+          aria-label="Partager"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            />
+          </svg>
+          <span className="hidden sm:inline">Partager</span>
+        </button>
+
+        {/* ⬅️ NOUVEAU : Bouton gérer membres (owner uniquement) */}
+        {isOwner && (
+          <button
+            onClick={onManageMembers}
+            className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
+            aria-label="Gérer les membres"
+          >
+            {/* Icône utilisateurs */}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            {/* Texte visible desktop uniquement */}
+            <span className="hidden sm:inline">Membres</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
