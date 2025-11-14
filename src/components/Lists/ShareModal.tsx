@@ -28,7 +28,8 @@ export default function ShareModal({
 
   if (!isOpen) return null;
 
-  const shareUrl = `${window.location.origin}/list/${wishlistSlug}`;
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, ''); // enlève le / final
+  const shareUrl = `${window.location.origin}${basePath}/list/${wishlistSlug}`;
 
   // ✅ Détection propre du partage natif (évite l'erreur TS2774)
   const hasNativeShare =
