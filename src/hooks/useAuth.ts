@@ -28,7 +28,6 @@ function buildVirtualProfile(user: User): Profile {
   id: user.id,
   email,
   display_name: displayName, // ✅ string, pas null
-  avatar_url: meta?.avatar_url ?? null,
   username: meta?.username ?? null,
   bio: meta?.bio ?? null,
   notifications_enabled: true,

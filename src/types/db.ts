@@ -9,7 +9,6 @@ export interface Profile {
   id: string;
   email: string;
   display_name: string;
-  avatar_url: string | null;
   username: string | null;
   bio: string | null;
   notifications_enabled: boolean;

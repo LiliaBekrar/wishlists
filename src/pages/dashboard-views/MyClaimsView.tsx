@@ -1,5 +1,6 @@
 // 📄 src/pages/dashboard-views/MyClaimsView.tsx
 // 🧠 Vue "Mes réservations" basée sur ItemCard
+// 🔧 Fix : bouton "Voir la liste" basé sur items.wishlist_id + fetch du slug au clic
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { FOCUS_RING } from '../../utils/constants';
 import Toast from '../../components/Toast';
 import ItemCard from '../../components/Items/ItemCard';
 import type { Item } from '../../hooks/useItems';
+import { supabase } from '../../lib/supabaseClient';
 
 interface MyClaim {
   id: string;
@@ -15,6 +17,7 @@ interface MyClaim {
     original_wishlist_name: string | null;
     original_owner_id: string | null;
   };
+  // ⚠️ wishlist peut exister côté TS mais on ne s’y fie plus pour le bouton
   wishlist?: {
     id: string;
     name: string;
@@ -33,6 +36,60 @@ interface MyClaimsViewProps {
 export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
   const navigate = useNavigate();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [loadingListId, setLoadingListId] = useState<string | null>(null);
+
+  console.log('[MyClaimsView] render → claims =', claims);
+
+  // 🔎 Handler "Voir la liste" : on fetch le slug à partir du wishlist_id
+  const handleViewList = async (wishlistId: string | null) => {
+    if (!wishlistId) {
+      setToast({
+        message: "Cette liste n'existe plus ou a été supprimée.",
+        type: 'error',
+      });
+      return;
+    }
+
+    try {
+      setLoadingListId(wishlistId);
+      console.log('[MyClaimsView] handleViewList → fetch wishlist pour id =', wishlistId);
+
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('slug')
+        .eq('id', wishlistId)
+        .single();
+
+      if (error) {
+        console.error('❌ [MyClaimsView] erreur fetch wishlist:', error);
+        setToast({
+          message: "Impossible d'ouvrir cette liste pour le moment.",
+          type: 'error',
+        });
+        return;
+      }
+
+      if (!data?.slug) {
+        console.warn('[MyClaimsView] wishlist trouvée mais slug manquant pour id =', wishlistId, 'data =', data);
+        setToast({
+          message: "Cette liste n'est plus accessible.",
+          type: 'error',
+        });
+        return;
+      }
+
+      console.log('[MyClaimsView] navigation → /list/', data.slug);
+      navigate(`/list/${data.slug}`);
+    } catch (err) {
+      console.error('❌ [MyClaimsView] exception handleViewList:', err);
+      setToast({
+        message: "Erreur inattendue lors de l'ouverture de la liste.",
+        type: 'error',
+      });
+    } finally {
+      setLoadingListId(null);
+    }
+  };
 
   if (claims.length === 0) {
     return (
@@ -70,21 +127,33 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
             const wishlistIdForCard =
               claim.items.wishlist_id ?? claim.wishlist?.id ?? '';
 
+            console.log('[MyClaimsView] claim =', {
+              id: claim.id,
+              itemWishlistId: claim.items.wishlist_id,
+              wishlistIdForCard,
+              wishlistFromJoin: claim.wishlist,
+            });
+
+            const listNameBadge =
+              claim.wishlist?.name || claim.items.original_wishlist_name || 'Liste';
+
+            const isOrphan = !claim.items.wishlist_id;
+
             return (
               <div key={claim.id} className="relative space-y-2">
                 {/* Badge "Liste supprimée" si orphelin */}
-                {!claim.items.wishlist_id && (
+                {isOrphan && (
                   <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-gray-500/90 backdrop-blur text-white text-xs font-bold rounded-full">
                     📦 Liste supprimée
                   </div>
                 )}
 
-                {/* Badge info liste (juste le nom) */}
-                {claim.wishlist && (
+                {/* Badge info liste (nom) si on a quelque chose à afficher */}
+                {listNameBadge && (
                   <div className="absolute top-2 right-2 z-10">
-                    <div className="bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs shadow-sm">
-                      <div className="font-semibold text-gray-900 truncate max-w-[140px]">
-                        {claim.wishlist.name}
+                    <div className="bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs shadow-sm max-w-[160px]">
+                      <div className="font-semibold text-gray-900 truncate">
+                        {listNameBadge}
                       </div>
                     </div>
                   </div>
@@ -93,21 +162,47 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
                 {/* ✅ Réutilisation de ItemCard */}
                 <ItemCard
                   item={claim.items}
-                  isOwner={false}            // tu n’es pas owner ici
-                  canClaim={false}           // déjà réservé → on veut juste le bouton "Annuler" si c'est toi
+                  isOwner={false}
+                  canClaim={false}
                   wishlistId={wishlistIdForCard}
                   onClaimChange={() => {
+                    console.log('[MyClaimsView] onClaimChange → onRefresh()');
                     onRefresh();
                   }}
                 />
 
-                {/* Bouton "Voir la liste" en dessous si besoin */}
-                {claim.wishlist?.slug && (
+                {/* Bouton "Voir la liste" → basé uniquement sur items.wishlist_id */}
+                {claim.items.wishlist_id && (
                   <button
-                    onClick={() => navigate(`/list/${claim.wishlist!.slug}`)}
+                    onClick={() => handleViewList(claim.items.wishlist_id)}
                     className={`w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-600 text-sm font-semibold rounded-lg transition-all ${FOCUS_RING}`}
+                    disabled={loadingListId === claim.items.wishlist_id}
                   >
-                    📋 Voir la liste
+                    {loadingListId === claim.items.wishlist_id ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        <span className="ml-1">Ouverture...</span>
+                      </>
+                    ) : (
+                      <>
+                        📋 Voir la liste
+                      </>
+                    )}
                   </button>
                 )}
               </div>

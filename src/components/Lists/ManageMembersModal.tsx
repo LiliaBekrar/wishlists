@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 ManageMembersModal.tsx
 // 🧠 Rôle : Modal pour gérer les membres (inviter, retirer, changer rôle)
-// 🔧 Fix : Key unique + suppression avec user_id/wishlist_id
+// 🔧 Fix : Key unique + suppression avec user_id/wishlist_id + LOGS
 
 import { useState } from 'react';
 import { useMembers } from '../../hooks/useMembers';
@@ -21,8 +21,18 @@ export default function ManageMembersModal({
   wishlistId,
   isOwner,
 }: ManageMembersModalProps) {
-  const { members, loading, removeMember, acceptMember } = useMembers(wishlistId);
+  const { members, loading, error, removeMember, acceptMember } = useMembers(wishlistId);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // 🔍 LOG rendu
+  console.log('[ManageMembersModal] render', {
+    isOpen,
+    wishlistId,
+    loading,
+    error,
+    membersCount: members.length,
+    members,
+  });
 
   if (!isOpen) return null;
 
@@ -31,6 +41,7 @@ export default function ManageMembersModal({
     if (!confirm(`Retirer ${username} de cette liste ?`)) return;
 
     try {
+      console.log('[ManageMembersModal] handleRemove', { userId, username, wishlistId });
       await removeMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
       setToast({ message: `✅ ${username} retiré`, type: 'success' });
     } catch (error) {
@@ -42,6 +53,7 @@ export default function ManageMembersModal({
   // ✅ Accepter une demande
   const handleAccept = async (userId: string, username: string) => {
     try {
+      console.log('[ManageMembersModal] handleAccept', { userId, username, wishlistId });
       await acceptMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
       setToast({ message: `✅ ${username} accepté`, type: 'success' });
     } catch (error) {
@@ -85,6 +97,13 @@ export default function ManageMembersModal({
 
           {/* Body */}
           <div className="p-6 space-y-6">
+            {/* Petit message d'erreur si RLS / SQL bloque */}
+            {error && (
+              <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+                Erreur de chargement des membres : {error}
+              </div>
+            )}
+
             {/* Liste des membres */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">
@@ -93,11 +112,13 @@ export default function ManageMembersModal({
 
               {loading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4" />
                   <p className="text-gray-500">Chargement...</p>
                 </div>
               ) : members.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Aucun membre pour le moment</p>
+                <p className="text-gray-500 text-center py-8">
+                  Aucun membre pour le moment
+                </p>
               ) : (
                 <div className="space-y-2">
                   {members.map((member) => {
@@ -109,7 +130,7 @@ export default function ManageMembersModal({
 
                     return (
                       <div
-                        key={`${member.user_id}-${member.wishlist_id}`} // ⬅️ FIX : Key unique basée sur clé composite
+                        key={`${member.user_id}-${member.wishlist_id}`} // ⬅️ Key composite stable
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
                       >
                         <div className="flex items-center gap-3">
@@ -134,14 +155,14 @@ export default function ManageMembersModal({
                           <div className="flex gap-2">
                             {isPending && (
                               <button
-                                onClick={() => handleAccept(member.user_id, displayName)} // ⬅️ FIX : user_id
+                                onClick={() => handleAccept(member.user_id, displayName)}
                                 className={`px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
                               >
                                 ✅ Accepter
                               </button>
                             )}
                             <button
-                              onClick={() => handleRemove(member.user_id, displayName)} // ⬅️ FIX : user_id
+                              onClick={() => handleRemove(member.user_id, displayName)}
                               className={`px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
                             >
                               ❌ Retirer
