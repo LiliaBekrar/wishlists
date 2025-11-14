@@ -50,169 +50,154 @@ export default function Dashboard() {
   }>({ open: false, wishlist: null });
 
   // ⬅️ Charger toutes les données (SANS useCallback pour éviter la boucle)
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user) {
-        console.log('⏭️ Pas d\'utilisateur connecté');
-        setDataLoading(false);
-        return;
-      }
+useEffect(() => {
+  const loadData = async () => {
+    if (!user) {
+      console.log('⏭️ Pas d\'utilisateur connecté');
+      setDataLoading(false);
+      return;
+    }
 
-      console.log('🔵 Chargement des données Dashboard pour:', user.id);
-      setDataLoading(true);
+    console.log('🔵 Chargement des données Dashboard pour:', user.id);
+    setDataLoading(true);
 
-      try {
-        // 1️⃣ Compteurs items + membres (pour mes listes)
-        if (wishlists.length > 0) {
-          const ids = wishlists.map((w) => w.id);
+    try {
+      // 1️⃣ Compteurs items + membres (pour mes listes)
+      if (wishlists.length > 0) {
+        const ids = wishlists.map((w) => w.id);
 
-          // Items counts
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('items')
-            .select('id, wishlist_id')
-            .in('wishlist_id', ids);
+        // Items counts
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('items')
+          .select('id, wishlist_id')
+          .in('wishlist_id', ids);
 
-          if (itemsError) {
-            console.error('❌ Erreur chargement items:', itemsError);
-          } else {
-            const iCounts: Record<string, number> = {};
-            for (const item of itemsData ?? []) {
-              iCounts[item.wishlist_id] = (iCounts[item.wishlist_id] || 0) + 1;
-            }
-            setItemCounts(iCounts);
-            console.log('✅ Items counts chargés:', iCounts);
+        if (itemsError) {
+          console.error('❌ Erreur chargement items:', itemsError);
+        } else {
+          const iCounts: Record<string, number> = {};
+          for (const item of itemsData ?? []) {
+            iCounts[item.wishlist_id] = (iCounts[item.wishlist_id] || 0) + 1;
           }
-
-          // Members counts
-          const { data: membersData, error: membersError } = await supabase
-            .from('wishlist_members')
-            .select('wishlist_id')
-            .in('wishlist_id', ids)
-            .eq('status', 'actif');
-
-          if (membersError) {
-            console.error('❌ Erreur chargement membres:', membersError);
-          } else {
-            const mCounts: Record<string, number> = {};
-            for (const m of membersData ?? []) {
-              mCounts[m.wishlist_id] = (mCounts[m.wishlist_id] || 0) + 1;
-            }
-            setMemberCounts(mCounts);
-            console.log('✅ Members counts chargés:', mCounts);
-          }
+          setItemCounts(iCounts);
+          console.log('✅ Items counts chargés:', iCounts);
         }
 
-        // 2️⃣ Listes où je suis membre
-        console.log('🔵 Chargement listes membres...');
-        const { data: memberLists, error: memberListsError } = await supabase
+        // Members counts
+        const { data: membersData, error: membersError } = await supabase
           .from('wishlist_members')
-          .select(`
-            wishlist_id,
-            user_id,
+          .select('wishlist_id')
+          .in('wishlist_id', ids)
+          .eq('status', 'actif');
+
+        if (membersError) {
+          console.error('❌ Erreur chargement membres:', membersError);
+        } else {
+          const mCounts: Record<string, number> = {};
+          for (const m of membersData ?? []) {
+            mCounts[m.wishlist_id] = (mCounts[m.wishlist_id] || 0) + 1;
+          }
+          setMemberCounts(mCounts);
+          console.log('✅ Members counts chargés:', mCounts);
+        }
+      }
+
+      // 2️⃣ Listes où je suis membre
+      console.log('🔵 Chargement listes membres...');
+      const { data: memberLists, error: memberListsError } = await supabase
+        .from('wishlist_members')
+        .select(`
+          wishlist_id,
+          user_id,
+          status,
+          role,
+          wishlists!inner(
+            id,
+            name,
+            slug,
+            theme,
+            description,
+            owner_id
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'actif');
+
+      if (memberListsError) {
+        console.error('❌ Erreur chargement listes membres:', memberListsError);
+        console.error('Details:', memberListsError.details);
+        console.error('Hint:', memberListsError.hint);
+        console.error('Code:', memberListsError.code);
+      } else {
+        console.log('🔵 Listes membres brutes:', memberLists?.length, memberLists);
+
+        // Reformater pour correspondre à l'interface MemberWishlist
+        const formatted = (memberLists || []).map((member: any) => ({
+          wishlist_id: member.wishlist_id,
+          user_id: member.user_id,
+          role: member.role,
+          status: member.status,
+          wishlist: {
+            id: member.wishlists.id,
+            name: member.wishlists.name,
+            slug: member.wishlists.slug,
+            theme: member.wishlists.theme,
+            description: member.wishlists.description
+          }
+        }));
+
+        setMemberWishlists(formatted);
+        console.log('✅ Listes membres formatées:', formatted.length, formatted);
+      }
+
+      // 3️⃣ Mes claims (réservations)
+      console.log('🔵 Chargement mes claims...');
+      const { data: claims, error: claimsError } = await supabase
+        .from('claims')
+        .select(`
+          id,
+          created_at,
+          status,
+          items!inner(
+            id,
+            title,
+            price,
+            url,
+            image_url,
+            priority,
             status,
-            role,
-            wishlists!inner(
+            wishlist_id,
+            original_wishlist_name,
+            original_owner_id,
+            wishlists (
               id,
               name,
               slug,
-              theme,
-              description,
               owner_id
             )
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'actif');
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'réservé')
+        .order('created_at', { ascending: false });
 
-        if (memberListsError) {
-          console.error('❌ Erreur chargement listes membres:', memberListsError);
-          console.error('Details:', memberListsError.details);
-          console.error('Hint:', memberListsError.hint);
-          console.error('Code:', memberListsError.code);
-        } else {
-          console.log('🔵 Listes membres brutes:', memberLists?.length, memberLists);
-
-          // ⬅️ Reformater pour correspondre à l'interface MemberWishlist
-          const formatted = (memberLists || []).map((member: any) => ({
-            wishlist_id: member.wishlist_id,
-            user_id: member.user_id,
-            role: member.role,
-            status: member.status,
-            wishlist: {  // ⬅️ SANS 's' pour correspondre à l'interface
-              id: member.wishlists.id,
-              name: member.wishlists.name,
-              slug: member.wishlists.slug,
-              theme: member.wishlists.theme,
-              description: member.wishlists.description
-            }
-          }));
-
-          setMemberWishlists(formatted);
-          console.log('✅ Listes membres formatées:', formatted.length, formatted);
-        }
-
-        // 3️⃣ Mes claims (réservations)
-        console.log('🔵 Chargement mes claims...');
-        const { data: claims, error: claimsError } = await supabase
-          .from('claims')
-          .select(`
-            id,
-            created_at,
-            items!inner(
-              id,
-              title,
-              price,
-              url,
-              image_url,
-              priority,
-              status,
-              wishlist_id,
-              original_wishlist_name,
-              original_owner_id
-            )
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'réservé')
-          .order('created_at', { ascending: false });
-
-        if (claimsError) {
-          console.error('❌ Erreur chargement claims:', claimsError);
-        } else {
-          console.log('✅ Claims bruts chargés:', claims?.length);
-
-          // Enrichir avec wishlist si elle existe
-          const enriched = await Promise.all(
-            (claims || []).map(async (claim: any) => {
-              if (claim.items?.wishlist_id) {
-                const { data: wishlist } = await supabase
-                  .from('wishlists')
-                  .select(`
-                    id,
-                    name,
-                    slug,
-                    owner_id,
-                    profiles:owner_id(username, pseudo)
-                  `)
-                  .eq('id', claim.items.wishlist_id)
-                  .single();
-
-                return { ...claim, wishlist };
-              }
-              return claim;
-            })
-          );
-
-          setMyClaims(enriched);
-          console.log('✅ Claims enrichis chargés:', enriched.length);
-        }
-      } catch (error) {
-        console.error('❌ Erreur globale chargement données:', error);
-      } finally {
-        setDataLoading(false);
+      if (claimsError) {
+        console.error('❌ Erreur chargement claims:', claimsError);
+      } else {
+        console.log('✅ Claims chargés:', claims?.length);
+        console.log('🔍 Premier claim:', claims?.[0]);
+console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wishlists);
+        setMyClaims(claims || []);
       }
-    };
+    } catch (error) {
+      console.error('❌ Erreur globale chargement données:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
-    loadData();
-  }, [user?.id, wishlists.length]); // ⬅️ CORRECTION : user?.id au lieu de user, wishlists.length au lieu de wishlists
+  loadData();
+}, [user?.id, wishlists.length]);
 
   // Handlers
   const handleSubmitList = async (data: any) => {

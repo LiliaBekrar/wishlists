@@ -16,8 +16,13 @@ interface MyClaim {
     wishlist_id: string | null;
     original_wishlist_name: string | null;
     original_owner_id: string | null;
+    wishlists?: {  // ⬅️ AJOUTÉ
+      id: string;
+      name: string;
+      slug: string | null;
+    };
   };
-  // ⚠️ wishlist peut exister côté TS mais on ne s’y fie plus pour le bouton
+  // ⚠️ wishlist peut exister côté TS mais on ne s'y fie plus pour le bouton
   wishlist?: {
     id: string;
     name: string;
@@ -135,7 +140,7 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
             });
 
             const listNameBadge =
-              claim.wishlist?.name || claim.items.original_wishlist_name || 'Liste';
+              claim.items?.wishlists?.name || claim.items.original_wishlist_name || 'Liste';
 
             const isOrphan = !claim.items.wishlist_id;
 
