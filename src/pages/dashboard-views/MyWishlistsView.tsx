@@ -1,6 +1,5 @@
 // 📄 src/pages/dashboard-views/MyWishlistsView.tsx
 // 🧠 Rôle : Vue "Mes listes" avec cartes + actions
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useNavigate } from 'react-router-dom';
 import { FOCUS_RING, THEMES } from '../../utils/constants';

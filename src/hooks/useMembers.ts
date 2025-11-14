@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 useMembers.ts
 // 🧠 Rôle : Hook pour gérer les membres d'une wishlist (CRUD) avec notifications
+// 🔧 Fix : Suppression avec clé composite (user_id + wishlist_id)
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -12,9 +13,7 @@ export interface WishlistMember {
   wishlist_id: string;
   user_id: string;
   role: 'owner' | 'viewer';
-  // En base tu as "pending" / "actif" → on normalise en 2 états simples
   status: 'pending' | 'accepted';
-  // ta table n'a pas created_at, tu as plutôt requested_at / approved_at / joined_at
   joined_at?: string;
   requested_at?: string;
   approved_at?: string;
@@ -57,8 +56,7 @@ export function useMembers(wishlistId?: string) {
         `
         )
         .eq('wishlist_id', wishlistId)
-        // 🔧 FIX: ta table n'a pas created_at → on trie sur joined_at qui existe
-        .order('joined_at', { ascending: true });
+        .order('joined_at', { ascending: true, nullsFirst: false });
 
       if (fetchError) throw fetchError;
 
@@ -67,7 +65,6 @@ export function useMembers(wishlistId?: string) {
       const normalized =
         (data || []).map((row: any) => ({
           ...row,
-          // on convertit tout ce qui n'est pas "pending" en "accepted"
           status: row.status === 'pending' ? 'pending' : 'accepted',
         })) as WishlistMember[];
 
@@ -88,56 +85,73 @@ export function useMembers(wishlistId?: string) {
   }, [wishlistId]);
 
   // ❌ Retirer un membre (avec notification)
-  const removeMember = async (memberId: string) => {
-    // 1) Récupérer les infos du membre avant suppression
-    const { data: member } = await supabase
-      .from('wishlist_members')
-      .select('user_id, wishlist_id, profiles(username, display_name)')
-      .eq('id', memberId)
-      .single();
+  const removeMember = async (userId: string) => {
+    if (!wishlistId) throw new Error('wishlistId manquant');
 
-    if (!member) {
-      throw new Error('Membre introuvable');
+    console.log('🗑️ removeMember → userId =', userId, 'wishlistId =', wishlistId);
+
+    try {
+      // 1) Récupérer les infos du membre avant suppression
+      const { data: member } = await supabase
+        .from('wishlist_members')
+        .select('user_id, wishlist_id, profiles(username, display_name)')
+        .eq('user_id', userId) // ⬅️ FIX : user_id
+        .eq('wishlist_id', wishlistId) // ⬅️ FIX : wishlist_id
+        .single();
+
+      if (!member) {
+        throw new Error('Membre introuvable');
+      }
+
+      // 2) Récupérer les infos de la wishlist
+      const { data: wishlist } = await supabase
+        .from('wishlists')
+        .select('name')
+        .eq('id', wishlistId)
+        .single();
+
+      // 3) Supprimer le membre (clé composite)
+      const { error } = await supabase
+        .from('wishlist_members')
+        .delete()
+        .eq('user_id', userId) // ⬅️ FIX : user_id
+        .eq('wishlist_id', wishlistId); // ⬅️ FIX : wishlist_id
+
+      if (error) throw error;
+
+      // 4) 🔔 CRÉER UNE NOTIFICATION
+      if (wishlist) {
+        await createNotification({
+          userId: member.user_id,
+          type: 'acces_refuse',
+          title: "👋 Retrait d'une liste",
+          message: `Tu as été retiré(e) de la liste "${wishlist.name}"`,
+          data: {
+            wishlistId: member.wishlist_id,
+            wishlistName: wishlist.name,
+          },
+        });
+      }
+
+      console.log('✅ Membre retiré et notifié');
+
+      // 5) Recharger
+      await fetchMembers();
+    } catch (err) {
+      console.error('❌ removeMember → Erreur:', err);
+      throw err;
     }
-
-    // 2) Récupérer les infos de la wishlist
-    const { data: wishlist } = await supabase
-      .from('wishlists')
-      .select('name')
-      .eq('id', member.wishlist_id)
-      .single();
-
-    // 3) Supprimer le membre
-    const { error } = await supabase.from('wishlist_members').delete().eq('id', memberId);
-
-    if (error) throw error;
-
-    // 4) 🔔 CRÉER UNE NOTIFICATION
-    if (wishlist) {
-      await createNotification({
-        userId: member.user_id,
-        type: 'acces_refuse', // ou "member_removed" si tu crées ce type
-        title: "👋 Retrait d'une liste",
-        message: `Tu as été retiré(e) de la liste "${wishlist.name}"`,
-        data: {
-          wishlistId: member.wishlist_id,
-          wishlistName: wishlist.name,
-        },
-      });
-    }
-
-    console.log('✅ Membre retiré et notifié');
-
-    // 5) Recharger
-    await fetchMembers();
   };
 
   // 🔄 Changer le rôle (owner → viewer ou inverse)
-  const updateRole = async (memberId: string, newRole: 'owner' | 'viewer') => {
+  const updateRole = async (userId: string, newRole: 'owner' | 'viewer') => {
+    if (!wishlistId) throw new Error('wishlistId manquant');
+
     const { error } = await supabase
       .from('wishlist_members')
       .update({ role: newRole })
-      .eq('id', memberId);
+      .eq('user_id', userId)
+      .eq('wishlist_id', wishlistId);
 
     if (error) throw error;
 
@@ -145,11 +159,16 @@ export function useMembers(wishlistId?: string) {
   };
 
   // ✅ Accepter une demande d'accès
-  const acceptMember = async (memberId: string) => {
+  const acceptMember = async (userId: string) => {
+    if (!wishlistId) throw new Error('wishlistId manquant');
+
+    console.log('✅ acceptMember → userId =', userId, 'wishlistId =', wishlistId);
+
     const { error } = await supabase
       .from('wishlist_members')
       .update({ status: 'accepted' })
-      .eq('id', memberId);
+      .eq('user_id', userId)
+      .eq('wishlist_id', wishlistId);
 
     if (error) throw error;
 

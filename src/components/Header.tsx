@@ -28,12 +28,12 @@ export default function Header() {
             to="/"
             className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${FOCUS_RING}`}
           >
-            <span className="text-3xl animate-swing">🎁</span>
+            <span className="text-3xl icon-bounce-active">🎁</span>
             <div className="flex flex-col leading-tight">
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="text-xl icon-bounce-active font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
                 WishLists
               </span>
-              <span className="text-xs text-gray-500">by Lilia</span>
+              <span className="text-xs text-gray-500 icon-bounce-active">by Lilia</span>
             </div>
           </Link>
 

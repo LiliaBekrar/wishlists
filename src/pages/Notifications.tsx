@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/Notifications.tsx
 // 🧠 Rôle : Page notifications avec onglets et historique des actions
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // 📄 src/hooks/useItems.ts
 // 🧠 Rôle : Hook pour gérer les items (cadeaux) d'une liste
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';

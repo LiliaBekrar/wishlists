@@ -30,7 +30,7 @@ export default function MemberWishlistsView({
   if (memberWishlists.length === 0) {
     return (
       <div className="text-center py-16 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-8">
-        <div className="text-6xl mb-4">🎁</div>
+        <div className="text-6xl icon-bounce-active mb-4">🎁</div>
         <h3 className="text-2xl font-bold text-gray-900 mb-3">
           Aucune liste partagée
         </h3>

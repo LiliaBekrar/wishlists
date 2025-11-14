@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // 📄 src/pages/list-view/useListAccess.ts
 // 🧠 Rôle : Gérer la logique d'accès aux listes (vérification + demande)
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
