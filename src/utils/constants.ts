@@ -68,15 +68,15 @@ export const FOCUS_RING = 'focus:outline-none focus:ring-2 focus:ring-offset-2 f
 export const VISIBILITIES = {
   privée: {
     label: '🔒 Privée',
-    description: 'Invitation e-mail → auto viewer ; Lien → demande validation'
+    description: 'Seuls les membres approuvés peuvent voir et réserver'
   },
   partagée: {
     label: '🔗 Partagée',
-    description: 'Lecture libre ; Réserver → demande à rejoindre'
+    description: 'Tous les connectés voient, seuls les membres peuvent réserver'
   },
   publique: {
     label: '🌍 Publique',
-    description: 'Lecture libre ; Réserver → auto viewer'
+    description: 'Tout le monde voit, les connectés peuvent réserver'
   }
 } as const;
 

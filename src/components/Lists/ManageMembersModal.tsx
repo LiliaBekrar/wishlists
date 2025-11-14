@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 ManageMembersModal.tsx
-// 🧠 Rôle : Modal pour gérer les membres (inviter, retirer, changer rôle)
-// 🔧 Fix : Key unique + suppression avec user_id/wishlist_id + LOGS
+// 🧠 Rôle : Modal pour gérer les membres (inviter, retirer, accepter)
 
 import { useState } from 'react';
 import { useMembers } from '../../hooks/useMembers';
@@ -12,7 +11,7 @@ interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   wishlistId: string;
-  isOwner: boolean; // ⬅️ Seul l'owner peut inviter/retirer
+  isOwner: boolean;
 }
 
 export default function ManageMembersModal({
@@ -24,7 +23,6 @@ export default function ManageMembersModal({
   const { members, loading, error, removeMember, acceptMember } = useMembers(wishlistId);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // 🔍 LOG rendu
   console.log('[ManageMembersModal] render', {
     isOpen,
     wishlistId,
@@ -36,13 +34,13 @@ export default function ManageMembersModal({
 
   if (!isOpen) return null;
 
-  // ❌ Retirer un membre
+  // Retirer un membre
   const handleRemove = async (userId: string, username: string) => {
     if (!confirm(`Retirer ${username} de cette liste ?`)) return;
 
     try {
       console.log('[ManageMembersModal] handleRemove', { userId, username, wishlistId });
-      await removeMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
+      await removeMember(userId);
       setToast({ message: `✅ ${username} retiré`, type: 'success' });
     } catch (error) {
       console.error('❌ Erreur retrait membre:', error);
@@ -50,11 +48,11 @@ export default function ManageMembersModal({
     }
   };
 
-  // ✅ Accepter une demande
+  // Accepter une demande
   const handleAccept = async (userId: string, username: string) => {
     try {
       console.log('[ManageMembersModal] handleAccept', { userId, username, wishlistId });
-      await acceptMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
+      await acceptMember(userId);
       setToast({ message: `✅ ${username} accepté`, type: 'success' });
     } catch (error) {
       console.error('❌ Erreur acceptation:', error);
@@ -64,10 +62,8 @@ export default function ManageMembersModal({
 
   return (
     <>
-      {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         onClick={onClose}
@@ -97,7 +93,6 @@ export default function ManageMembersModal({
 
           {/* Body */}
           <div className="p-6 space-y-6">
-            {/* Petit message d'erreur si RLS / SQL bloque */}
             {error && (
               <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
                 Erreur de chargement des membres : {error}
@@ -126,11 +121,11 @@ export default function ManageMembersModal({
                       member.profiles?.display_name ||
                       member.profiles?.username ||
                       'Utilisateur';
-                    const isPending = member.status === 'pending';
+                    const isPending = member.status === 'en_attente';
 
                     return (
                       <div
-                        key={`${member.user_id}-${member.wishlist_id}`} // ⬅️ Key composite stable
+                        key={`${member.user_id}-${member.wishlist_id}`}
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
                       >
                         <div className="flex items-center gap-3">
@@ -144,8 +139,8 @@ export default function ManageMembersModal({
                             <p className="font-semibold text-gray-900">{displayName}</p>
                             <p className="text-sm text-gray-500">
                               {member.role === 'owner' && '👑 Propriétaire'}
-                              {member.role === 'viewer' && '👀 Viewer'}
-                              {isPending && ' (en attente)'}
+                              {member.role === 'viewer' && isPending && '⏳ En attente'}
+                              {member.role === 'viewer' && !isPending && '👀 Membre'}
                             </p>
                           </div>
                         </div>

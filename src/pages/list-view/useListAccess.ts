@@ -2,7 +2,6 @@
 // 📄 src/pages/list-view/useListAccess.ts
 // 🧠 Rôle : Gérer la logique d'accès aux listes (vérification + demande)
 
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { createNotification } from '../../hooks/useNotifications';
@@ -33,10 +32,11 @@ export function useListAccess(
 
     // Si pas connecté
     if (!userId) {
-      if (wishlist.visibility === 'privée') {
-        setAccessStatus('denied');
-      } else {
+      // ⬅️ FIX : Partagée = denied si pas connecté
+      if (wishlist.visibility === 'publique') {
         setAccessStatus('guest');
+      } else {
+        setAccessStatus('denied');
       }
       return;
     }
@@ -51,7 +51,7 @@ export function useListAccess(
     try {
       const { data: member, error } = await supabase
         .from('wishlist_members')
-        .select('status, approved, role, email') // ⬅️ FIX : Pas de 'id'
+        .select('status, role')
         .eq('wishlist_id', wishlist.id)
         .eq('user_id', userId)
         .maybeSingle();
@@ -61,30 +61,35 @@ export function useListAccess(
         throw error;
       }
 
-      // ⬅️ LOGIQUE DE STATUT
-      // Priorité 1 : Si approved = true → accès accordé
-      if (member?.approved === true) {
-        setAccessStatus('granted');
-      }
-      // Priorité 2 : Si status = 'en_attente' → en attente
-      else if (member?.status === 'en_attente') {
-        setAccessStatus('pending');
-      }
-      // Priorité 3 : Si status = 'refusé' → refusé (mais peut redemander ?)
-      else if (member?.status === 'refusé') {
-        setAccessStatus('denied');
-      }
-      // Pas membre
-      else if (!member) {
-        if (wishlist.visibility === 'privée' || wishlist.visibility === 'partagée') {
-          setAccessStatus('denied');
+      // ⬅️ Si membre
+      if (member) {
+        if (member.status === 'actif') {
+          setAccessStatus('granted');
+        } else if (member.status === 'en_attente') {
+          setAccessStatus('pending');
         } else {
-          setAccessStatus('guest');
+          // Refusé ou quitté → guest si partagée/publique
+          if (wishlist.visibility === 'publique' || wishlist.visibility === 'partagée') {
+            setAccessStatus('guest');
+          } else {
+            setAccessStatus('denied');
+          }
         }
       }
-      // Membre mais pas approved et pas de statut clair
+      // ⬅️ Pas membre
       else {
-        setAccessStatus('pending');
+        // Publique → guest (peut voir et réserver)
+        if (wishlist.visibility === 'publique') {
+          setAccessStatus('guest');
+        }
+        // ⬅️ FIX : Partagée → guest (peut voir mais pas réserver)
+        else if (wishlist.visibility === 'partagée') {
+          setAccessStatus('guest');
+        }
+        // Privée → denied
+        else {
+          setAccessStatus('denied');
+        }
       }
     } catch (error) {
       console.error('❌ Erreur lors de la vérification d\'accès:', error);
@@ -109,27 +114,25 @@ export function useListAccess(
       // Vérifier qu'il n'y a pas déjà une demande
       const { data: existing } = await supabase
         .from('wishlist_members')
-        .select('status, approved, role')
+        .select('status, role')
         .eq('wishlist_id', wishlist.id)
         .eq('user_id', userId)
         .maybeSingle();
 
       if (existing) {
-        if (existing.approved === true) {
+        if (existing.status === 'actif') {
           throw new Error('Tu es déjà membre de cette liste.');
         }
         if (existing.status === 'en_attente') {
           throw new Error('Ta demande est déjà en attente.');
         }
-        if (existing.status === 'refusé') {
-          console.log('📝 Mise à jour d\'une demande précédemment refusée');
-        }
+        console.log('📝 Nouvelle demande après refus/départ précédent');
       }
 
       // Récupérer l'email de l'utilisateur
       const { data: profile } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, username, display_name')
         .eq('id', userId)
         .single();
 
@@ -137,17 +140,24 @@ export function useListAccess(
         throw new Error('Email introuvable.');
       }
 
+      // Nom à afficher dans la notification
+      const requesterName =
+        profile.display_name ||
+        profile.username ||
+        profile.email.split('@')[0];
+
       // ✅ 1) TENTER D'ENVOYER LA NOTIF AU PROPRIÉTAIRE
       const notif = await createNotification({
         userId: wishlist.owner_id,
         type: 'demande_acces',
         title: '🔔 Nouvelle demande d\'accès',
-        message: `${profile.email} souhaite rejoindre ta liste "${wishlist.name}".`,
+        message: `${requesterName} souhaite rejoindre ta liste "${wishlist.name}".`,
         data: {
           wishlistId: wishlist.id,
           wishlistSlug: wishlist.slug,
           requesterId: userId,
           requesterEmail: profile.email,
+          requesterName,
         },
       });
 
@@ -165,10 +175,8 @@ export function useListAccess(
           {
             wishlist_id: wishlist.id,
             user_id: userId,
-            email: profile.email,
             role: 'viewer',
             status: 'en_attente',
-            approved: false,
             requested_at: new Date().toISOString(),
           },
           {
@@ -181,11 +189,13 @@ export function useListAccess(
         throw upsertError;
       }
 
+      console.log('✅ Demande d\'accès enregistrée');
+
       // ✅ Statut local
       setAccessStatus('pending');
     } catch (error) {
       console.error('❌ Erreur demande accès:', error);
-      throw error; // très important pour que la page affiche un toast d'erreur
+      throw error;
     } finally {
       setRequestSending(false);
     }
@@ -195,6 +205,6 @@ export function useListAccess(
     accessStatus,
     requestSending,
     handleRequestAccess,
-    refreshAccess: checkAccess, // ⬅️ Pour forcer un refresh
+    refreshAccess: checkAccess,
   };
 }

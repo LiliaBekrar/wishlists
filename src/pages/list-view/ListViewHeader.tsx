@@ -1,25 +1,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/list-view/ListViewHeader.tsx
-// 🧠 Rôle : Header avec bannière, titre et boutons (+ gérer membres)
+// 🧠 Rôle : Header avec bannière, titre et boutons (+ gérer membres + quitter)
 
 import { BANNER_HEIGHT } from '../../utils/constants';
 import type { Wishlist } from '../../hooks/useWishlists';
 
 interface Props {
   wishlist: Wishlist;
-  isOwner: boolean; // ⬅️ NOUVEAU : pour afficher le bouton uniquement si owner
+  isOwner: boolean;
+  isMember: boolean;
   onBack: () => void;
   onShare: () => void;
-  onManageMembers: () => void; // ⬅️ NOUVEAU
+  onManageMembers: () => void;
+  onLeaveList: () => void;
   BannerComponent: React.ComponentType<any>;
 }
 
 export default function ListViewHeader({
   wishlist,
   isOwner,
+  isMember,
   onBack,
   onShare,
   onManageMembers,
+  onLeaveList,
   BannerComponent,
 }: Props) {
   return (
@@ -79,14 +83,13 @@ export default function ListViewHeader({
           <span className="hidden sm:inline">Partager</span>
         </button>
 
-        {/* ⬅️ NOUVEAU : Bouton gérer membres (owner uniquement) */}
+        {/* Bouton gérer membres (owner uniquement) */}
         {isOwner && (
           <button
             onClick={onManageMembers}
             className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
             aria-label="Gérer les membres"
           >
-            {/* Icône utilisateurs */}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -95,8 +98,26 @@ export default function ListViewHeader({
                 d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
               />
             </svg>
-            {/* Texte visible desktop uniquement */}
             <span className="hidden sm:inline">Membres</span>
+          </button>
+        )}
+
+        {/* Bouton quitter (membre non-owner uniquement) */}
+        {!isOwner && isMember && (
+          <button
+            onClick={onLeaveList}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-red-600"
+            aria-label="Quitter la liste"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            <span className="hidden sm:inline">Quitter</span>
           </button>
         )}
       </div>

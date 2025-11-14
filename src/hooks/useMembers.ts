@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 useMembers.ts
-// 🧠 Rôle : Hook pour gérer les membres d'une wishlist (CRUD) avec notifications
-// 🔧 Fix : Suppression avec clé composite (user_id + wishlist_id) + LOGS
+// 🧠 Rôle : Hook pour gérer les membres d'une wishlist (CRUD simplifié)
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { createNotification } from './useNotifications';
 
-// ⚙️ Types
 export interface WishlistMember {
   id: string;
   wishlist_id: string;
   user_id: string;
   role: 'owner' | 'viewer';
-  status: 'pending' | 'accepted';
+  status: 'actif' | 'en_attente';
   joined_at?: string;
   requested_at?: string;
   approved_at?: string;
@@ -29,7 +27,6 @@ export function useMembers(wishlistId?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 📥 Charger les membres
   const fetchMembers = async () => {
     if (!wishlistId) {
       console.warn('⚠️ useMembers appelé sans wishlistId');
@@ -62,15 +59,8 @@ export function useMembers(wishlistId?: string) {
 
       if (fetchError) throw fetchError;
 
-      const normalized =
-        (data || []).map((row: any) => ({
-          ...row,
-          status: row.status === 'pending' ? 'pending' : 'accepted',
-        })) as WishlistMember[];
-
-      console.log('✅ [useMembers.fetchMembers] normalized =', normalized);
-
-      setMembers(normalized);
+      setMembers((data || []) as WishlistMember[]);
+      console.log('✅ [useMembers.fetchMembers] membres chargés:', data?.length);
     } catch (err) {
       console.error('❌ [useMembers.fetchMembers] Erreur chargement membres:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -80,66 +70,49 @@ export function useMembers(wishlistId?: string) {
     }
   };
 
-  // 🔄 Recharger au montage ou si wishlistId change
   useEffect(() => {
     console.log('🧷 [useMembers.useEffect] mount / wishlistId changé =', wishlistId);
     fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wishlistId]);
 
-  // ❌ Retirer un membre (avec notification)
+  // ❌ Retirer un membre (DELETE)
   const removeMember = async (userId: string) => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
     console.log('🗑️ [useMembers.removeMember] userId =', userId, 'wishlistId =', wishlistId);
 
     try {
-      // 1) Récupérer les infos du membre avant suppression
-      const { data: member, error: memberError } = await supabase
+      // 1) Récupérer les infos avant suppression
+      const { data: member } = await supabase
         .from('wishlist_members')
         .select('user_id, wishlist_id, profiles(username, display_name)')
-        .eq('user_id', userId) // ⬅️ FIX : user_id
-        .eq('wishlist_id', wishlistId) // ⬅️ FIX : wishlist_id
+        .eq('user_id', userId)
+        .eq('wishlist_id', wishlistId)
         .single();
 
-      console.log('📥 [removeMember] membre trouvé =', { member, memberError });
-
-      if (memberError) {
-        console.error('❌ [removeMember] erreur get membre:', memberError);
-      }
-
-      if (!member) {
-        throw new Error('Membre introuvable');
-      }
-
-      // 2) Récupérer les infos de la wishlist
-      const { data: wishlist, error: wishlistError } = await supabase
+      const { data: wishlist } = await supabase
         .from('wishlists')
         .select('name')
         .eq('id', wishlistId)
         .single();
 
-      console.log('📥 [removeMember] wishlist =', { wishlist, wishlistError });
-
-      // 3) Supprimer le membre (clé composite)
+      // 2) DELETE
       const { error } = await supabase
         .from('wishlist_members')
         .delete()
-        .eq('user_id', userId) // ⬅️ FIX : user_id
-        .eq('wishlist_id', wishlistId); // ⬅️ FIX : wishlist_id
+        .eq('user_id', userId)
+        .eq('wishlist_id', wishlistId);
 
-      if (error) {
-        console.error('❌ [removeMember] delete error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // 4) 🔔 CRÉER UNE NOTIFICATION
-      if (wishlist) {
+      // 3) Notification
+      if (wishlist && member) {
         await createNotification({
           userId: member.user_id,
           type: 'acces_refuse',
-          title: "👋 Retrait d'une liste",
-          message: `Tu as été retiré(e) de la liste "${wishlist.name}"`,
+          title: "❌ Accès retiré",
+          message: `Tu n'as plus accès à la liste "${wishlist.name}"`,
           data: {
             wishlistId: member.wishlist_id,
             wishlistName: wishlist.name,
@@ -147,9 +120,8 @@ export function useMembers(wishlistId?: string) {
         });
       }
 
-      console.log('✅ [removeMember] Membre retiré et notifié');
+      console.log('✅ [removeMember] Membre supprimé et notifié');
 
-      // 5) Recharger
       await fetchMembers();
     } catch (err) {
       console.error('❌ [removeMember] Erreur:', err);
@@ -157,11 +129,79 @@ export function useMembers(wishlistId?: string) {
     }
   };
 
-  // 🔄 Changer le rôle (owner → viewer ou inverse)
+  // 🚪 Quitter une liste (DELETE)
+  const leaveMembership = async (userId: string) => {
+    if (!wishlistId) throw new Error('wishlistId manquant');
+
+    console.log('🚪 [useMembers.leaveMembership] userId =', userId, 'wishlistId =', wishlistId);
+
+    try {
+      // 1) Récupérer infos
+      const { data: memberProfile } = await supabase
+        .from('profiles')
+        .select('username, display_name, email')
+        .eq('id', userId)
+        .single();
+
+      const { data: wishlist } = await supabase
+        .from('wishlists')
+        .select('owner_id, name')
+        .eq('id', wishlistId)
+        .single();
+
+      if (!wishlist) throw new Error('Liste introuvable');
+
+      if (wishlist.owner_id === userId) {
+        throw new Error('Le propriétaire ne peut pas quitter sa propre liste');
+      }
+
+      // 2) DELETE
+      const { error: deleteError } = await supabase
+        .from('wishlist_members')
+        .delete()
+        .eq('user_id', userId)
+        .eq('wishlist_id', wishlistId);
+
+      if (deleteError) throw deleteError;
+
+      console.log('✅ [leaveMembership] Membre supprimé');
+
+      // 3) Notification à l'owner
+      const memberName =
+        memberProfile?.display_name ||
+        memberProfile?.username ||
+        memberProfile?.email?.split('@')[0] ||
+        'Un membre';
+
+      const memberMail = memberProfile?.email
+
+      await createNotification({
+        userId: wishlist.owner_id,
+        type: 'acces_refuse',
+        title: '👋 Un membre a quitté',
+        message: `${memberName}(${memberMail}) a quitté la liste "${wishlist.name}"`,
+        data: {
+          wishlistId,
+          wishlistName: wishlist.name,
+          memberUserId: userId,
+          memberName,
+        },
+      });
+
+      console.log('✅ [leaveMembership] Owner notifié');
+
+      return { success: true };
+    } catch (err) {
+      console.error('❌ [leaveMembership] Erreur:', err);
+      throw err;
+    }
+  };
+
+  // 🔄 Changer le rôle
   const updateRole = async (userId: string, newRole: 'owner' | 'viewer') => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
-    console.log('♻️ [updateRole] userId =', userId, 'newRole =', newRole, 'wishlistId =', wishlistId);
+    console.log('♻️ [updateRole] userId =', userId, 'newRole =', newRole);
 
     const { error } = await supabase
       .from('wishlist_members')
@@ -169,30 +209,24 @@ export function useMembers(wishlistId?: string) {
       .eq('user_id', userId)
       .eq('wishlist_id', wishlistId);
 
-    if (error) {
-      console.error('❌ [updateRole] error:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     await fetchMembers();
   };
 
-  // ✅ Accepter une demande d'accès
+  // ✅ Accepter une demande
   const acceptMember = async (userId: string) => {
     if (!wishlistId) throw new Error('wishlistId manquant');
 
-    console.log('✅ [acceptMember] userId =', userId, 'wishlistId =', wishlistId);
+    console.log('✅ [acceptMember] userId =', userId);
 
     const { error } = await supabase
       .from('wishlist_members')
-      .update({ status: 'accepted' })
+      .update({ status: 'actif' })
       .eq('user_id', userId)
       .eq('wishlist_id', wishlistId);
 
-    if (error) {
-      console.error('❌ [acceptMember] error:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     await fetchMembers();
   };
@@ -203,6 +237,7 @@ export function useMembers(wishlistId?: string) {
     error,
     fetchMembers,
     removeMember,
+    leaveMembership,
     updateRole,
     acceptMember,
   };
