@@ -29,7 +29,7 @@ export default function Toast({ message, type, onClose, duration = 5000 }: Toast
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 p-4 rounded-lg border-2 shadow-lg animate-fade-in ${colors[type]} max-w-md`}
+      className={`fixed top-4 right-4 z-5000 p-4 rounded-lg border-2 shadow-lg animate-fade-in ${colors[type]} max-w-md`}
       role="alert"
     >
       <div className="flex items-start gap-3">

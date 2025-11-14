@@ -1,6 +1,6 @@
 // 📄 ListStats.tsx
 // 🧠 Rôle : Stats d'une wishlist (total, disponibles, réservés)
-import type { Item } from '../hooks/useItems';
+import type { Item } from '../../hooks/useItems';
 
 interface ListStatsProps {
   items: Item[];

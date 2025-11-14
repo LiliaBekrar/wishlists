@@ -1,8 +1,8 @@
 // 📄 CreateListModal.tsx
-// 🧠 Rôle : Modal de création de liste responsive mobile-first
-import { useState } from 'react';
-import { getBannerByTheme, type ThemeType } from './banners';
-import { THEMES, VISIBILITIES, FOCUS_RING, BANNER_HEIGHT } from '../utils/constants';
+// 🧠 Rôle : Modal de création/édition de liste responsive mobile-first
+import { useState, useEffect } from 'react';
+import { getBannerByTheme, type ThemeType } from '../banners';
+import { THEMES, VISIBILITIES, FOCUS_RING, BANNER_HEIGHT } from '../../utils/constants';
 
 type VisibilityType = 'privée' | 'partagée' | 'publique';
 
@@ -15,14 +15,50 @@ interface CreateListModalProps {
     theme: ThemeType;
     visibility: VisibilityType;
   }) => Promise<void>;
+  // ⬅️ NOUVEAU : Props pour l'édition
+  editMode?: boolean;
+  initialData?: {
+    name: string;
+    description: string;
+    theme: ThemeType;
+    visibility: VisibilityType;
+  };
 }
 
-export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateListModalProps) {
+export default function CreateListModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  editMode = false,
+  initialData,
+}: CreateListModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [theme, setTheme] = useState<ThemeType>('autre');
   const [visibility, setVisibility] = useState<VisibilityType>('privée');
   const [loading, setLoading] = useState(false);
+
+  // ⬅️ NOUVEAU : Fonction reset
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setTheme('autre');
+    setVisibility('privée');
+  };
+
+  // ⬅️ NOUVEAU : useEffect pour pré-remplir en mode édition
+  useEffect(() => {
+    if (isOpen && editMode && initialData) {
+      console.log('🔵 Mode édition activé avec:', initialData);
+      setName(initialData.name);
+      setDescription(initialData.description || '');
+      setTheme(initialData.theme);
+      setVisibility(initialData.visibility);
+    } else if (isOpen && !editMode) {
+      console.log('🔵 Mode création - Reset formulaire');
+      resetForm();
+    }
+  }, [isOpen, editMode, initialData]);
 
   if (!isOpen) return null;
 
@@ -32,14 +68,14 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
 
     try {
       await onSubmit({ name, description, theme, visibility });
-      // Reset form
-      setName('');
-      setDescription('');
-      setTheme('autre');
-      setVisibility('privée');
+
+      // Reset uniquement en mode création
+      if (!editMode) {
+        resetForm();
+      }
       onClose();
     } catch (error) {
-      console.error('❌ Erreur création liste:', error);
+      console.error('❌ Erreur:', error);
     } finally {
       setLoading(false);
     }
@@ -51,10 +87,7 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
     }
   };
 
-  // ✅ Récupérer le composant de bannière via helper typé
   const BannerComponent = getBannerByTheme(theme);
-
-  // ✅ Clés typées depuis THEMES sans forcer ThemeType si la constante évolue
   const themeKeys = Object.keys(THEMES) as Array<keyof typeof THEMES>;
 
   return (
@@ -66,15 +99,12 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
       aria-labelledby="modal-title"
     >
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl">
-
         {/* Header avec aperçu bannière */}
         <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl md:rounded-t-3xl">
-          {/* Bannière en z-0 */}
           <div className="relative z-0">
             <BannerComponent height={BANNER_HEIGHT.small} />
           </div>
 
-          {/* Bouton fermer toujours au-dessus */}
           <button
             type="button"
             onClick={onClose}
@@ -87,20 +117,19 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
             </svg>
           </button>
 
-          {/* Titre sur la bannière (sous la croix, au-dessus de la bannière) */}
+          {/* ⬅️ MODIFIÉ : Titre dynamique selon mode */}
           <div className="absolute inset-0 z-10 flex items-center justify-center px-4">
             <h2
               id="modal-title"
               className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg text-center"
             >
-              Créer une nouvelle liste 🎁
+              {editMode ? '✏️ Modifier la liste' : '🎁 Créer une nouvelle liste'}
             </h2>
           </div>
         </div>
 
         {/* Formulaire responsive */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
-
           {/* Nom de la liste */}
           <div>
             <label htmlFor="list-name" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -139,11 +168,9 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
             <p className="mt-1 text-xs text-gray-500">{description.length}/500 caractères</p>
           </div>
 
-          {/* Choix du thème - responsive grid */}
+          {/* Choix du thème */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Thème de la liste *
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">Thème de la liste *</label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
               {themeKeys.map((themeKey) => {
                 const themeData = THEMES[themeKey];
@@ -176,9 +203,7 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                       </div>
                     )}
                     <div className="text-center">
-                      <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">
-                        {themeData.label.split(' ')[1]}
-                      </div>
+                      <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">{themeData.label.split(' ')[1]}</div>
                       <div className={`text-xs font-medium ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
                         {themeData.label.split(' ')[0]}
                       </div>
@@ -189,11 +214,9 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
             </div>
           </div>
 
-          {/* Choix de la visibilité - responsive */}
+          {/* Choix de la visibilité */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Visibilité *
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">Visibilité *</label>
             <div className="space-y-2 sm:space-y-3">
               {(Object.keys(VISIBILITIES) as VisibilityType[]).map((visKey) => {
                 const visData = VISIBILITIES[visKey];
@@ -238,9 +261,7 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
                         >
                           {visData.label}
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                          {visData.description}
-                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">{visData.description}</div>
                       </div>
                     </div>
                   </button>
@@ -249,7 +270,7 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
             </div>
           </div>
 
-          {/* Boutons actions responsive */}
+          {/* Boutons actions */}
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -267,25 +288,17 @@ export default function CreateListModal({ isOpen, onClose, onSubmit }: CreateLis
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path
                       className="opacity-75"
                       fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Création...
+                  {editMode ? 'Modification...' : 'Création...'}
                 </span>
               ) : (
-                '✨ Créer ma liste'
+                <>{editMode ? '✅ Enregistrer' : '✨ Créer ma liste'}</>
               )}
             </button>
           </div>

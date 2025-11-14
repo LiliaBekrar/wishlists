@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 AddItemModal.tsx
-// 🧠 Rôle : Modal complète pour ajouter un cadeau avec fetch Open Graph
-import { useState } from 'react';
-import { FOCUS_RING } from '../utils/constants';
-import { uploadItemImage } from '../lib/uploadImage';
-import { supabase } from '../lib/supabaseClient';
+// 🧠 Rôle : Modal pour ajouter OU modifier un cadeau avec fetch Open Graph
+import { useState, useEffect } from 'react';
+import { FOCUS_RING } from '../../utils/constants';
+import { uploadItemImage } from '../../lib/uploadImage';
+import { supabase } from '../../lib/supabaseClient';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -20,9 +20,28 @@ interface AddItemModalProps {
     color: string;
     promo_code: string;
   }) => Promise<void>;
+  // ⬅️ NOUVEAU : Props pour l'édition
+  editMode?: boolean;
+  initialData?: {
+    name: string;
+    description: string;
+    url: string;
+    image_url: string;
+    price: number;
+    priority: 'basse' | 'moyenne' | 'haute';
+    size: string;
+    color: string;
+    promo_code: string;
+  };
 }
 
-export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
+export default function AddItemModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  editMode = false,
+  initialData,
+}: AddItemModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
@@ -36,6 +55,41 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
   const [fetchingOG, setFetchingOG] = useState(false);
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url');
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // ⬅️ NOUVEAU : Fonction pour reset le formulaire
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setUrl('');
+    setImageUrl('');
+    setPrice('');
+    setPriority('moyenne');
+    setSize('');
+    setColor('');
+    setPromoCode('');
+    setImageMode('url');
+  };
+
+  // ⬅️ NOUVEAU : useEffect pour pré-remplir en mode édition
+  useEffect(() => {
+    if (isOpen && editMode && initialData) {
+      // Mode édition : pré-remplir avec les données existantes
+      console.log('🔵 Mode édition activé avec:', initialData);
+      setName(initialData.name);
+      setDescription(initialData.description || '');
+      setUrl(initialData.url || '');
+      setImageUrl(initialData.image_url || '');
+      setPrice(initialData.price.toString());
+      setPriority(initialData.priority);
+      setSize(initialData.size || '');
+      setColor(initialData.color || '');
+      setPromoCode(initialData.promo_code || '');
+    } else if (isOpen && !editMode) {
+      // Mode création : reset le formulaire
+      console.log('🔵 Mode création - Reset formulaire');
+      resetForm();
+    }
+  }, [isOpen, editMode, initialData]);
 
   if (!isOpen) return null;
 
@@ -59,22 +113,16 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
         priority,
         size: size || '',
         color: color || '',
-        promo_code: promoCode || ''
+        promo_code: promoCode || '',
       });
 
-      // Reset form
-      setName('');
-      setDescription('');
-      setUrl('');
-      setImageUrl('');
-      setPrice('');
-      setPriority('moyenne');
-      setSize('');
-      setColor('');
-      setPromoCode('');
+      // Reset uniquement en mode création
+      if (!editMode) {
+        resetForm();
+      }
       onClose();
     } catch (error) {
-      console.error('❌ Erreur ajout item:', error);
+      console.error('❌ Erreur:', error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +144,9 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
       console.log('🔵 Fetch Open Graph pour:', url);
 
       // Appel à une API Open Graph (il faudra créer une edge function plus tard)
-      const response = await fetch(`https://opengraph.io/api/1.1/site/${encodeURIComponent(url)}?app_id=YOUR_APP_ID`);
+      const response = await fetch(
+        `https://opengraph.io/api/1.1/site/${encodeURIComponent(url)}?app_id=YOUR_APP_ID`
+      );
 
       if (!response.ok) {
         throw new Error('Erreur fetch Open Graph');
@@ -109,9 +159,6 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
       if (data.hybridGraph?.description) setDescription(data.hybridGraph.description);
       if (data.hybridGraph?.image) setImageUrl(data.hybridGraph.image);
 
-      // Essayer d'extraire le prix (selon le site)
-      // TODO: logique spécifique par site (Amazon, Fnac, etc.)
-
       console.log('✅ Open Graph récupéré:', data);
     } catch (error) {
       console.error('❌ Erreur fetch OG:', error);
@@ -121,7 +168,6 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
     }
   };
 
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -130,7 +176,9 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
 
     try {
       // Récupérer l'user ID
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('Non authentifié');
 
       // Upload l'image
@@ -142,7 +190,7 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
       console.log('✅ Image uploadée:', publicUrl);
     } catch (error) {
       console.error('❌ Erreur upload:', error);
-      alert(error instanceof Error ? error.message : 'Erreur lors de l\'upload');
+      alert(error instanceof Error ? error.message : "Erreur lors de l'upload");
     } finally {
       setUploadingImage(false);
     }
@@ -157,7 +205,6 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
       aria-labelledby="modal-title"
     >
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-xl sm:rounded-2xl shadow-2xl">
-
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-xl sm:rounded-t-2xl z-10">
           <button
@@ -172,16 +219,17 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
           </button>
 
           <h2 id="modal-title" className="text-2xl font-bold">
-            Ajouter un cadeau 🎁
+            {editMode ? '✏️ Modifier le cadeau' : '🎁 Ajouter un cadeau'}
           </h2>
           <p className="text-sm opacity-90 mt-1">
-            Remplis les informations du cadeau que tu souhaites
+            {editMode
+              ? 'Modifie les informations du cadeau'
+              : 'Remplis les informations du cadeau que tu souhaites'}
           </p>
         </div>
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-
           {/* URL avec bouton fetch */}
           <div>
             <label htmlFor="item-url" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -315,15 +363,32 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
                     {uploadingImage ? (
                       <div className="text-center">
                         <svg className="animate-spin h-8 w-8 mx-auto text-purple-600 mb-2" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
                         </svg>
                         <p className="text-sm text-gray-600">Upload en cours...</p>
                       </div>
                     ) : (
                       <div className="text-center">
                         <svg className="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
                         </svg>
                         <p className="text-sm text-gray-600">
                           <span className="font-semibold text-purple-600">Clique pour uploader</span>
@@ -341,11 +406,7 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
             {/* Aperçu image */}
             {imageUrl && (
               <div className="mt-3 relative inline-block">
-                <img
-                  src={imageUrl}
-                  alt="Aperçu"
-                  className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
-                />
+                <img src={imageUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200" />
                 <button
                   type="button"
                   onClick={() => setImageUrl('')}
@@ -376,7 +437,9 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
                   placeholder="49.99"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className={`w-full px-4 py-3 pr-8 text-base border-2 ${!price ? 'border-red-300' : 'border-gray-200'} rounded-xl transition-all ${FOCUS_RING} hover:border-purple-300`}
+                  className={`w-full px-4 py-3 pr-8 text-base border-2 ${
+                    !price ? 'border-red-300' : 'border-gray-200'
+                  } rounded-xl transition-all ${FOCUS_RING} hover:border-purple-300`}
                   required
                   disabled={loading}
                 />
@@ -475,13 +538,25 @@ export default function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModal
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
-                  Ajout...
+                  {editMode ? 'Modification...' : 'Ajout...'}
                 </span>
               ) : (
-                '✨ Ajouter le cadeau'
+                <>{editMode ? '✅ Enregistrer' : '✨ Ajouter le cadeau'}</>
               )}
             </button>
           </div>

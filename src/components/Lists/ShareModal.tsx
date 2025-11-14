@@ -3,8 +3,8 @@
 // 🧠 Rôle : Modal de partage responsive mobile/desktop
 
 import { useState } from 'react';
-import { FOCUS_RING } from '../utils/constants';
-import Toast from './Toast';
+import { FOCUS_RING } from '../../utils/constants';
+import Toast from '../Toast';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ interface ShareModalProps {
   wishlistName: string;
   visibility: 'privée' | 'partagée' | 'publique';
 }
+
+
 
 export default function ShareModal({
   isOpen,

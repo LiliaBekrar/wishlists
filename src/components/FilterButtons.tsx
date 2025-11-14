@@ -2,7 +2,7 @@
 // 🧠 Rôle : Boutons de filtrage par statut (pour viewers)
 import { FOCUS_RING } from '../utils/constants';
 
-export type StatusFilter = 'tous' | 'disponible' | 'réservé' | 'acheté';
+export type StatusFilter = 'tous' | 'disponible' | 'réservé';
 
 interface FilterButtonsProps {
   value: StatusFilter;
@@ -19,8 +19,7 @@ export default function FilterButtons({ value, onChange, counts }: FilterButtons
   const filters: { value: StatusFilter; label: string; icon: string; color: string }[] = [
     { value: 'tous', label: 'Tous', icon: '🎁', color: 'gray' },
     { value: 'disponible', label: 'Disponibles', icon: '✨', color: 'green' },
-    { value: 'réservé', label: 'Réservés', icon: '🔒', color: 'blue' },
-    { value: 'acheté', label: 'Achetés', icon: '✅', color: 'purple' }
+    { value: 'réservé', label: 'Réservés', icon: '🔒', color: 'blue' }
   ];
 
   return (
