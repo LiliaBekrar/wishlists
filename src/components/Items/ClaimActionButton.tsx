@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Items/ClaimActionButton.tsx
-// 🧠 Rôle : Bouton réserver/annuler compact avec gestion intelligente + logs + toasts
+// 🧠 Rôle : Bouton réserver/annuler avec notifications aux membres
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { notifyAllMembers } from '../../hooks/useNotifications'; // ⬅️ IMPORTER
 import { FOCUS_RING } from '../../utils/constants';
 import type { Item } from '../../hooks/useItems';
 
@@ -15,8 +16,8 @@ interface ClaimActionButtonProps {
   isOwner: boolean;
   canClaim: boolean;
   compact?: boolean;
-  onAction?: () => void; // ⬅️ pour refetch côté parent
-  onToast?: (toast: { message: string; type: 'success' | 'error' }) => void; // ⬅️ pour afficher un Toast
+  onAction?: () => void;
+  onToast?: (toast: { message: string; type: 'success' | 'error' }) => void;
 }
 
 export default function ClaimActionButton(props: ClaimActionButtonProps) {
@@ -35,7 +36,6 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
   const [claimerId, setClaimerId] = useState<string | null>(null);
   const [claimLoaded, setClaimLoaded] = useState(false);
 
-  // 🧠 Helper pour Toast + fallback console si jamais onToast n'est pas passé
   const showToast = (toast: { message: string; type: 'success' | 'error' }) => {
     if (onToast) {
       onToast(toast);
@@ -48,22 +48,14 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     }
   };
 
-  // ⬅️ Charger qui a réservé ce cadeau (si réservé)
   useEffect(() => {
-    console.log('[ClaimActionButton] useEffect item', item.id, 'status =', item.status);
-
     if (item.status !== 'réservé') {
       setClaimerId(null);
       setClaimLoaded(true);
       return;
     }
 
-    if (claimLoaded) {
-      console.log('[ClaimActionButton] claim déjà chargé pour item', item.id, 'claimerId =', claimerId);
-      return;
-    }
-
-    console.log('[ClaimActionButton] chargement du claim pour item', item.id);
+    if (claimLoaded) return;
 
     supabase
       .from('claims')
@@ -73,34 +65,20 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) {
-          console.error('❌ Erreur chargement claim (useEffect):', error);
-        } else {
-          console.log('[ClaimActionButton] claim trouvé pour item', item.id, '=> user_id =', data?.user_id);
+          console.error('❌ Erreur chargement claim:', error);
         }
         setClaimerId(data?.user_id || null);
         setClaimLoaded(true);
       });
-  }, [item.id, item.status, claimLoaded, claimerId]);
+  }, [item.id, item.status, claimLoaded]);
 
-  // ⬅️ OWNER : pas de bouton réserver
   if (isOwner) {
     return null;
   }
 
-  // ⬅️ Déterminer l'état
   const isMyReservation = claimerId === user?.id;
   const isReservedByOther = item.status === 'réservé' && !isMyReservation;
 
-  // console.log('[ClaimActionButton] render', {
-  //   itemId: item.id,
-  //   status: item.status,
-  //   claimerId,
-  //   currentUserId: user?.id,
-  //   isMyReservation,
-  //   isReservedByOther,
-  // });
-
-  // ⬅️ Handler réservation
   const handleReserve = async () => {
     if (!user) {
       showToast({ message: 'Connecte-toi pour réserver', type: 'error' });
@@ -112,16 +90,17 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
       return;
     }
 
-    console.log('[ClaimActionButton] handleReserve() pour item', item.id, 'par user', user.id);
-
     setLoading(true);
 
     try {
-      console.log('[ClaimActionButton] INSERT into claims...', {
-        item_id: item.id,
-        user_id: user.id,
-      });
+      // 1️⃣ Récupérer le slug de la wishlist pour la notification
+      const { data: wishlist } = await supabase
+        .from('wishlists')
+        .select('slug, name')
+        .eq('id', wishlistId)
+        .single();
 
+      // 2️⃣ Insérer le claim
       const { error: claimError } = await supabase
         .from('claims')
         .insert({
@@ -131,21 +110,15 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         });
 
       if (claimError) {
-        console.error('❌ Erreur INSERT claim:', claimError);
-
         const pgCode = (claimError as any).code;
         const message = (claimError as any).message as string | undefined;
 
-        // Contrainte unique → déjà réservé
-        if (
-          pgCode === '23505' ||
-          (message && message.toLowerCase().includes('duplicate key'))
-        ) {
+        if (pgCode === '23505' || (message && message.toLowerCase().includes('duplicate key'))) {
           showToast({
-            message: 'Ce cadeau a déjà été réservé par quelqu’un d’autre.',
+            message: 'Ce cadeau a déjà été réservé par quelqu\'un d\'autre.',
             type: 'error',
           });
-          onAction?.(); // ⬅️ refetch pour avoir l’état réel
+          onAction?.();
           return;
         }
 
@@ -156,10 +129,25 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         return;
       }
 
-      // ✅ Ici, le trigger en BDD mettra `items.status = 'réservé'`
-      showToast({ message: '🎁 Cadeau réservé avec succès !', type: 'success' });
+      // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
+      if (wishlist) {
+        await notifyAllMembers({
+          wishlistId,
+          type: 'reservation_cadeau',
+          title: '🎯 Cadeau réservé',
+          message: `Quelqu'un a réservé "${item.title}" sur la liste "${wishlist.name}".`,
+          data: {
+            wishlistSlug: wishlist.slug,
+            itemId: item.id,
+            itemName: item.title,
+          },
+          excludeUserIds: [user.id], // ⬅️ Exclure celui qui réserve
+        });
 
-      console.log('✅ Réservation réussie, onAction() (refetch items)');
+        console.log('✅ Notifications envoyées aux membres');
+      }
+
+      showToast({ message: '🎁 Cadeau réservé avec succès !', type: 'success' });
       onAction?.();
     } catch (error: any) {
       console.error('❌ Exception handleReserve:', error);
@@ -172,23 +160,23 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     }
   };
 
-  // ⬅️ Handler annulation
   const handleCancel = async () => {
     if (!user) return;
 
     const confirmCancel = window.confirm('Annuler ta réservation ?');
-    if (!confirmCancel) {
-      console.log('[ClaimActionButton] annulation refusée par l’utilisateur pour item', item.id);
-      return;
-    }
-
-    console.log('[ClaimActionButton] handleCancel() pour item', item.id, 'par user', user.id);
+    if (!confirmCancel) return;
 
     setLoading(true);
 
     try {
-      console.log('[ClaimActionButton] DELETE FROM claims WHERE item_id = ?, user_id = ?', item.id, user.id);
+      // 1️⃣ Récupérer le slug de la wishlist pour la notification
+      const { data: wishlist } = await supabase
+        .from('wishlists')
+        .select('slug, name')
+        .eq('id', wishlistId)
+        .single();
 
+      // 2️⃣ Supprimer le claim
       const { error: deleteError } = await supabase
         .from('claims')
         .delete()
@@ -196,7 +184,6 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         .eq('user_id', user.id);
 
       if (deleteError) {
-        console.error('❌ Erreur DELETE claim:', deleteError);
         showToast({
           message: deleteError.message || "Erreur lors de l'annulation",
           type: 'error',
@@ -204,10 +191,25 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         return;
       }
 
-      // ✅ Ici, le trigger en BDD remettra `items.status = 'disponible'`
-      showToast({ message: '✅ Réservation annulée', type: 'success' });
+      // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
+      if (wishlist) {
+        await notifyAllMembers({
+          wishlistId,
+          type: 'liberation_cadeau',
+          title: '🔓 Cadeau disponible',
+          message: `"${item.title}" est de nouveau disponible sur la liste "${wishlist.name}".`,
+          data: {
+            wishlistSlug: wishlist.slug,
+            itemId: item.id,
+            itemName: item.title,
+          },
+          excludeUserIds: [user.id], // ⬅️ Exclure celui qui annule
+        });
 
-      console.log('✅ Annulation réussie, onAction() (refetch items)');
+        console.log('✅ Notifications envoyées aux membres');
+      }
+
+      showToast({ message: '✅ Réservation annulée', type: 'success' });
       onAction?.();
     } catch (error: any) {
       console.error('❌ Exception handleCancel:', error);
@@ -220,7 +222,6 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     }
   };
 
-  // ⬅️ Rendu selon l'état
   if (item.status === 'disponible') {
     return (
       <button
