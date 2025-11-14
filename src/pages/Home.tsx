@@ -38,7 +38,7 @@ export default function Home() {
         const msg = result.error instanceof Error ? result.error.message : 'Erreur inconnue';
         setToast({ message: `Erreur : ${msg}`, type: 'error' });
       } else {
-        setToast({ message: '✉️ Magic link envoyé ! Vérifie ta boîte mail.', type: 'success' });
+        setToast({ message: '✉️ Magic link envoyé ! Vérifie ta boîte mail ET tes spams 📬', type: 'success' });
         setEmail('');
       }
     } catch (err: unknown) {
@@ -59,7 +59,7 @@ export default function Home() {
         />
       )}
 
-      {/* Bannière responsive — version initiale conservée */}
+      {/* Bannière responsive */}
       <div className="relative overflow-hidden">
         <ModernBanner height={BANNER_HEIGHT.medium} className="sm:h-[300px] md:h-[350px]" />
 
@@ -69,20 +69,18 @@ export default function Home() {
               {APP_NAME}
             </h1>
 
-            {/* Tagline (fix type: sm:mb-3S -> sm:mb-3) */}
             <p className="text-base sm:text-lg md:text-xl font-semibold opacity-95 drop-shadow mb-2 sm:mb-3">
               {APP_TAGLINE}
             </p>
 
-            {/* Description avec un peu plus d'air en bas pour l’overlap */}
             <p className="text-sm sm:text-base md:text-lg lg:text-xl font-light opacity-85 drop-shadow px-2 pb-6 sm:pb-4 mb-3">
-              Ta wishlist intelligente — partage, réserves et budget maîtrisé 🎁
+              Ta wishlist intelligente — partage, réservation et budget maîtrisé 🎁
             </p>
           </div>
         </div>
       </div>
 
-      {/* Contenu principal — mêmes -mt qu’au début */}
+      {/* Contenu principal */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 sm:-mt-20 md:-mt-24 relative z-10">
         <div className="backdrop-blur-xl bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border border-white/20 p-6 sm:p-8 md:p-12 mb-8 sm:mb-12">
 
@@ -95,6 +93,25 @@ export default function Home() {
               <p className="text-sm sm:text-base text-gray-600 text-center mb-6 sm:mb-8 px-2">
                 Reçois un lien magique par e-mail et accède à tes listes instantanément
               </p>
+
+              {/* ⬅️ NOUVEAU : Avertissement SMTP/Spam */}
+              <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-900 text-sm mb-1">
+                      ⚠️ Vérifie tes spams !
+                    </h3>
+                    <p className="text-amber-800 text-xs leading-relaxed">
+                      L'e-mail peut arriver dans tes <strong>spams ou promotions</strong> car nous n'avons pas encore de serveur SMTP professionnel. Pense à vérifier ces dossiers ! 📬
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <div>
@@ -149,7 +166,7 @@ export default function Home() {
           ) : (
             /* --- Section Hero --- */
             <>
-              {/* Avantages clés — mêmes cards, centrage emoji corrigé */}
+              {/* Avantages clés */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
                 {[
                   {
@@ -189,7 +206,7 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* CTA identique */}
+              {/* CTA */}
               <div className="text-center">
                 <button
                   onClick={() => navigate('/?login=true')}
@@ -208,7 +225,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* --- Section "Comment ça marche" --- */}
+        {/* Section "Comment ça marche" */}
         <div className="pb-12 sm:pb-16 md:pb-20">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2 sm:mb-4 px-4">
             Comment ça marche ?
@@ -227,7 +244,7 @@ export default function Home() {
               <div key={i} className="text-center group">
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6">
                   <div className={`absolute inset-0 bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl rotate-6 group-hover:rotate-12 transition-transform`} />
-                  <div className={`relative bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl w-full h-full flex items-center justify-center text-white text-2xl sm:3xl font-bold shadow-lg`}>
+                  <div className={`relative bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl w-full h-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg`}>
                     {item.step}
                   </div>
                 </div>
