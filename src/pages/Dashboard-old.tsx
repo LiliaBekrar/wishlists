@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 Dashboard.tsx
 // 🧠 Rôle : Dashboard utilisateur avec listes + menu contextuel (membres, édition, partage, suppression)
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 ManageMembersModal.tsx
 // 🧠 Rôle : Modal pour gérer les membres (inviter, retirer, changer rôle)
+// 🔧 Fix : Key unique + suppression avec user_id/wishlist_id
 
 import { useState } from 'react';
 import { useMembers } from '../../hooks/useMembers';
@@ -25,25 +26,26 @@ export default function ManageMembersModal({
 
   if (!isOpen) return null;
 
-
   // ❌ Retirer un membre
-  const handleRemove = async (memberId: string, username: string) => {
+  const handleRemove = async (userId: string, username: string) => {
     if (!confirm(`Retirer ${username} de cette liste ?`)) return;
 
     try {
-      await removeMember(memberId);
+      await removeMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
       setToast({ message: `✅ ${username} retiré`, type: 'success' });
     } catch (error) {
+      console.error('❌ Erreur retrait membre:', error);
       setToast({ message: '❌ Erreur lors du retrait', type: 'error' });
     }
   };
 
   // ✅ Accepter une demande
-  const handleAccept = async (memberId: string, username: string) => {
+  const handleAccept = async (userId: string, username: string) => {
     try {
-      await acceptMember(memberId);
+      await acceptMember(userId); // ⬅️ FIX : Passe userId (pas memberId)
       setToast({ message: `✅ ${username} accepté`, type: 'success' });
     } catch (error) {
+      console.error('❌ Erreur acceptation:', error);
       setToast({ message: '❌ Erreur', type: 'error' });
     }
   };
@@ -90,7 +92,10 @@ export default function ManageMembersModal({
               </h3>
 
               {loading ? (
-                <p className="text-gray-500 text-center py-8">Chargement...</p>
+                <div className="text-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-500">Chargement...</p>
+                </div>
               ) : members.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">Aucun membre pour le moment</p>
               ) : (
@@ -104,8 +109,8 @@ export default function ManageMembersModal({
 
                     return (
                       <div
-                        key={member.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                        key={`${member.user_id}-${member.wishlist_id}`} // ⬅️ FIX : Key unique basée sur clé composite
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
                       >
                         <div className="flex items-center gap-3">
                           {/* Avatar */}
@@ -129,14 +134,14 @@ export default function ManageMembersModal({
                           <div className="flex gap-2">
                             {isPending && (
                               <button
-                                onClick={() => handleAccept(member.id, displayName)}
+                                onClick={() => handleAccept(member.user_id, displayName)} // ⬅️ FIX : user_id
                                 className={`px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
                               >
                                 ✅ Accepter
                               </button>
                             )}
                             <button
-                              onClick={() => handleRemove(member.id, displayName)}
+                              onClick={() => handleRemove(member.user_id, displayName)} // ⬅️ FIX : user_id
                               className={`px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
                             >
                               ❌ Retirer

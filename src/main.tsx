@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/main.tsx
 // 🧠 Rôle : Point d'entrée React avec masquage automatique des logs en production
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

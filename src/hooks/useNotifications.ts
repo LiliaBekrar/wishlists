@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/hooks/useNotifications.ts
 // 🧠 Rôle : Hook pour gérer les notifications utilisateur
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { supabase } from '../lib/supabaseClient';
 

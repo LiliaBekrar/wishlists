@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Items/ItemCard.tsx
 // 🧠 Rôle : Card avec DropdownMenu unifié + ClaimActionButton
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { FOCUS_RING } from '../../utils/constants';
@@ -151,67 +150,47 @@ export default function ItemCard({
                 </a>
               )}
 
-              {item.promo_code && (
-                <button
-                  ref={promoBtnRef}
-                  onClick={handleCopyPromo}
-                  className={`relative flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${FOCUS_RING} shadow-sm
-                    ${copiedPromo ? 'bg-green-600 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}
-                  `}
-                  title="Copier le code promo"
-                  aria-live="polite"
-                >
-                  <svg
-                    className="w-3.5 h-3.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-
-                  <span
-                    ref={promoMeasureRef}
-                    className="absolute -left-[9999px] top-auto whitespace-nowrap font-mono"
-                  >
-                    {item.promo_code}
-                  </span>
-
-                  <span className="flex-1 min-w-0 overflow-hidden">
-                    {(() => {
-                      const showMarquee = shouldMarquee && !copiedPromo;
-                      const spacer = '\u00A0\u00A0•\u00A0\u00A0';
-
-                      if (!showMarquee) {
-                        return (
-                          <span className="inline-block font-mono truncate">
-                            {copiedPromo ? 'Copié !' : item.promo_code}
-                          </span>
-                        );
-                      }
-
-                      return (
-                        <span className="marquee-track marquee-duration-8s" style={{ willChange: 'transform' }}>
-                          <span className="inline-block font-mono whitespace-nowrap">
-                            {item.promo_code}
-                            {spacer}
-                          </span>
-                          <span className="inline-block font-mono whitespace-nowrap">
-                            {item.promo_code}
-                            {spacer}
-                          </span>
-                        </span>
-                      );
-                    })()}
-                  </span>
-                </button>
-              )}
+            {item.promo_code && (
+              <button
+                onClick={handleCopyPromo}
+                className={`text-sm px-3 py-1 ${
+                  copiedPromo
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
+                } rounded-lg font-bold transition-all ${FOCUS_RING} inline-flex items-center gap-1.5 overflow-hidden max-w-[200px]`}
+              >
+                {copiedPromo ? (
+                  <>
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="whitespace-nowrap">Copié !</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {/* Marquee uniquement si le code est long */}
+                    {item.promo_code.length > 12 ? (
+                      <div className="marquee-container flex-1 min-w-0">
+                        <div className="marquee-track marquee-duration-8s">
+                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="font-mono">{item.promo_code}</span>
+                    )}
+                  </>
+                )}
+              </button>
+            )}
             </div>
           </div>
 
@@ -296,7 +275,7 @@ export default function ItemCard({
           </div>
         ) : (
           <div className="w-full h-48 bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 flex items-center justify-center">
-            <span className="text-6xl">🎁</span>
+            <span className="text-6xl animate-swing">🎁</span>
           </div>
         )}
 
@@ -351,37 +330,62 @@ export default function ItemCard({
                   🎨 {item.color}
                 </span>
               )}
-              {item.promo_code && (
-                <button
-                  onClick={handleCopyPromo}
-                  className={`text-sm px-3 py-1 ${
-                    copiedPromo
-                      ? 'bg-green-600 text-white'
-                      : 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
-                  } rounded-lg font-bold transition-all ${FOCUS_RING} inline-flex items-center gap-1.5`}
+            {item.promo_code && (
+              <button
+                ref={promoBtnRef}
+                onClick={handleCopyPromo}
+                className={`relative flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${FOCUS_RING} shadow-sm overflow-hidden
+                  ${copiedPromo ? 'bg-green-600 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}
+                `}
+                title="Copier le code promo"
+                aria-live="polite"
+              >
+                <svg
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-                  {copiedPromo ? (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Copié !
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                      {item.promo_code}
-                    </>
-                  )}
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+
+                {/* Mesure invisible pour détecter débordement */}
+                <span
+                  ref={promoMeasureRef}
+                  className="absolute -left-[9999px] top-auto whitespace-nowrap font-mono"
+                  aria-hidden="true"
+                >
+                  {item.promo_code}
+                </span>
+
+                {/* Contenu visible avec marquee conditionnel */}
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  {(() => {
+                    if (copiedPromo) {
+                      return <span className="inline-block font-mono">Copié !</span>;
+                    }
+
+                    if (!shouldMarquee) {
+                      return <span className="inline-block font-mono truncate">{item.promo_code}</span>;
+                    }
+
+                    // Marquee animé
+                    return (
+                      <div className="marquee-track marquee-duration-8s">
+                        <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                        <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </button>
+            )}
             </div>
           )}
 
@@ -412,6 +416,7 @@ export default function ItemCard({
               <DropdownMenu
                 actions={menuActions}
                 ariaLabel={`Options pour ${item.title}`}
+                size="lg"
               />
             )}
           </div>

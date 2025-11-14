@@ -1,12 +1,8 @@
 // 📄 DropdownMenu.tsx
-// 🧠 Rôle : Menu contextuel SIMPLE avec positionnement relatif au bouton
-// 🛠️ Auteur : Claude IA pour WishLists v7
-
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import type { ReactNode } from 'react';
 import { FOCUS_RING } from '../utils/constants';
 
-// ⚙️ Types
 export interface DropdownAction {
   label: string;
   icon: ReactNode;
@@ -19,17 +15,18 @@ interface DropdownMenuProps {
   actions: DropdownAction[];
   ariaLabel?: string;
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export default function DropdownMenu({
   actions,
   ariaLabel = 'Menu options',
   className = '',
+  size = 'md',
 }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // 🔒 Fermer au clic extérieur
   useEffect(() => {
     if (!isOpen) return;
 
@@ -39,7 +36,6 @@ export default function DropdownMenu({
       }
     };
 
-    // Petit délai pour éviter que le clic d'ouverture ferme immédiatement
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -50,28 +46,44 @@ export default function DropdownMenu({
     };
   }, [isOpen]);
 
-  // ⌨️ Navigation clavier
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsOpen(false);
     }
   };
 
+  // ⚙️ Classes de taille adaptatives
+  const sizeClasses = {
+    sm: 'p-1.5',
+    md: 'p-2.5',
+    lg: 'h-[42px] w-[42px] flex items-center justify-center', // ⬅️ Hauteur fixe
+  };
+
+  const iconSizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-5 h-5',
+  };
+
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
-      {/* Bouton trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label={ariaLabel}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className={`p-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg transition-all ${FOCUS_RING}`}
+        className={`
+          ${sizeClasses[size]}
+          bg-gray-100 hover:bg-gray-200 active:bg-gray-300
+          text-gray-700 rounded-lg transition-all
+          ${FOCUS_RING}
+        `}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="currentColor"
-          className="w-5 h-5"
+          className={iconSizeClasses[size]}
         >
           <circle cx="12" cy="5" r="1.5" />
           <circle cx="12" cy="12" r="1.5" />
@@ -79,7 +91,6 @@ export default function DropdownMenu({
         </svg>
       </button>
 
-      {/* Menu déroulant */}
       {isOpen && (
         <div
           role="menu"

@@ -1,6 +1,5 @@
 // 📄 src/hooks/useWishlists.ts
 // 🧠 Rôle : Hook pour gérer les wishlists (CRUD + suppression avec orphelinage)
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';

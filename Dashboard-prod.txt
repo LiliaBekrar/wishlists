@@ -3,6 +3,7 @@
 // 📄 src/pages/Dashboard.tsx
 // 🧠 Rôle : Orchestrateur Dashboard avec tabs + chargement données (SANS boucle)
 
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useWishlists } from '../hooks/useWishlists';
@@ -314,7 +315,7 @@ export default function Dashboard() {
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
                 Bonjour {user?.display_name || user?.username || user?.email?.split('@')[0]} !
               </span>
-              <span className="ml-2 icon-shake-once">👋</span>
+              <span className="ml-2">👋</span>
             </h1>
           </div>
 
