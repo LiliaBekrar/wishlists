@@ -1,133 +1,126 @@
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function extractMeta(html: string, key: string): string | null {
-  const regex = new RegExp(
-    `<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']+)["'][^>]*>`,
-    'i'
-  );
-  const match = html.match(regex);
-  return match?.[1] ?? null;
-}
-
 serve(async (req) => {
-  // ✅ Preflight CORS
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
-
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      {
-        status: 405,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
-    const body = await req.json();
-    const url = body?.url as string | undefined;
+    const { url } = await req.json();
+    const apiKey = Deno.env.get("OPENGRAPH_API_KEY");
 
-    if (!url || typeof url !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'URL manquante ou invalide' }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
+    const ogRes = await fetch(
+      `https://opengraph.io/api/1.1/site/${encodeURIComponent(
+        url,
+      )}?app_id=${apiKey}&accept_lang=fr&auto_proxy=true`,
+    );
+    const json = await ogRes.json();
 
-    console.log('🔵 fetch-og — récupération de', url);
+    const hybrid = json.hybridGraph || {};
+    const inferred = json.htmlInferred || {};
 
-    const pageRes = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-      },
-    });
-
-    if (!pageRes.ok) {
-      console.error('❌ Erreur HTTP sur la page cible:', pageRes.status, pageRes.statusText);
-      return new Response(
-        JSON.stringify({ error: 'Impossible de récupérer la page cible' }),
-        {
-          status: 502,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
-
-    const html = await pageRes.text();
-
+    // --------- TEXTES ----------
     const title =
-      extractMeta(html, 'og:title') ||
-      extractMeta(html, 'twitter:title') ||
-      extractMeta(html, 'title');
-
-    const description =
-      extractMeta(html, 'og:description') ||
-      extractMeta(html, 'twitter:description') ||
-      extractMeta(html, 'description');
-
-    const image =
-      extractMeta(html, 'og:image') ||
-      extractMeta(html, 'twitter:image');
-
-    const priceStr =
-      extractMeta(html, 'product:price:amount') ||
-      extractMeta(html, 'og:price:amount') ||
+      inferred.title ||
+      inferred["og:title"] ||
+      hybrid.title ||
+      hybrid["og:title"] ||
       null;
 
-    const price = priceStr ? Number(parseFloat(priceStr)) : null;
+    let description =
+      inferred.description ||
+      inferred["og:description"] ||
+      hybrid.description ||
+      hybrid["og:description"] ||
+      null;
+
+    if (description) {
+      description = description.replace(/\s+/g, " ").trim();
+    }
+
+    // --------- IMAGE ----------
+    const image =
+      inferred.image ||
+      inferred["og:image"] ||
+      hybrid.image ||
+      hybrid["og:image"] ||
+      null;
+
+    // --------- PRIX ----------
+    let price = null;
+    const products = inferred.products || hybrid.products || [];
+    if (products?.length > 0) {
+      const offers = products[0].offers;
+      if (offers?.length > 0) {
+        price = Number(offers[0].price);
+      }
+    }
+
+    // --------- SPECIFICATIONS ----------
+    const specs =
+      products?.[0]?.specifications ||
+      inferred.specifications ||
+      hybrid.specifications ||
+      [];
+
+    let color = null;
+    let size = null;
+
+    for (const spec of specs) {
+      const key = spec.key.toLowerCase();
+
+      // 🎨 Couleur
+      if (!color && key.includes("couleur")) {
+        color = String(spec.value).replace("‎", "").trim();
+      }
+
+      // 📏 Taille / dimensions / capacité
+      if (
+        !size &&
+        (
+          key.includes("taille") ||
+          key.includes("capacité") ||
+          key.includes("format") ||
+          key.includes("dimension")
+        )
+      ) {
+        size = String(spec.value).replace("‎", "").trim();
+      }
+    }
+
+    // Fallback couleur depuis description si manquant
+    if (!color && description) {
+      const match = description.match(
+        /\b(Noir|Blanc|Rouge|Bleu|Vert|Rose|Gris|Beige|Jaune|Transparent|Transparente)\b/i,
+      );
+      if (match) color = match[0];
+    }
 
     const payload = {
-      title: title ?? null,
-      description: description ?? null,
-      image: image ?? null,
-      price: Number.isFinite(price) ? price : null,
+      title,
+      description,
+      image,
+      price,
+      color,
+      size,
     };
-
-    console.log('✅ fetch-og — payload renvoyé:', payload);
 
     return new Response(JSON.stringify(payload), {
       status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error('❌ fetch-og — erreur interne:', err);
-    return new Response(
-      JSON.stringify({ error: 'Erreur interne' }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    console.error("❌ Error:", err);
+    return new Response(JSON.stringify({ error: "Internal error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
