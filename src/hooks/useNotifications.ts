@@ -11,8 +11,8 @@ export type NotificationType =
   | 'demande_acces'
   | 'acces_accorde'
   | 'acces_refuse'
-  | 'reservation_cadeau'   // ⬅️ Quand quelqu'un réserve un cadeau
-  | 'liberation_cadeau';   // ⬅️ Quand un cadeau redevient disponible
+  | 'reservation_cadeau'
+  | 'liberation_cadeau';
 
 export interface Notification {
   id: string;
@@ -46,16 +46,32 @@ export async function createNotification({
   message,
   data = {},
 }: CreateNotificationParams): Promise<Notification | null> {
+  console.log('🔔 [createNotification] Début', {
+    userId,
+    type,
+    title,
+  });
+
   try {
     // Vérifier si l'utilisateur a activé les notifications
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('notifications_enabled')
       .eq('id', userId)
       .single();
 
+    if (profileError) {
+      console.error('❌ [createNotification] Erreur récup profile:', profileError);
+      return null;
+    }
+
+    console.log('📊 [createNotification] Profile trouvé:', {
+      userId,
+      notifications_enabled: profile?.notifications_enabled,
+    });
+
     if (!profile?.notifications_enabled) {
-      console.log('⏭️ Notifications désactivées pour cet utilisateur', { userId });
+      console.log('⏭️ [createNotification] Notifications désactivées pour:', userId);
       return null;
     }
 
@@ -74,32 +90,25 @@ export async function createNotification({
       .single();
 
     if (error) {
-      console.error('❌ Erreur création notification:', {
-        message: (error as any).message,
-        details: (error as any).details,
-        hint: (error as any).hint,
-        code: (error as any).code,
+      console.error('❌ [createNotification] Erreur INSERT:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
       });
       return null;
     }
 
-    console.log('✅ Notification créée:', notification);
+    console.log('✅ [createNotification] Notification créée:', notification.id);
     return notification as Notification;
   } catch (error) {
-    console.error('❌ Erreur création notification (exception):', error);
+    console.error('❌ [createNotification] Exception:', error);
     return null;
   }
 }
 
 /**
- * ⭐ NOUVEAU : Notifier tous les membres actifs d'une liste (sauf owner et sauf excluIds)
- *
- * @param wishlistId - ID de la liste concernée
- * @param type - Type de notification
- * @param title - Titre de la notification
- * @param message - Message de la notification
- * @param data - Données supplémentaires (doit contenir wishlistSlug et itemName)
- * @param excludeUserIds - IDs d'utilisateurs à ne PAS notifier (ex: celui qui réserve)
+ * ⭐ Notifier tous les membres actifs d'une liste (sauf owner et sauf excluIds)
  */
 export async function notifyAllMembers({
   wishlistId,
@@ -116,48 +125,76 @@ export async function notifyAllMembers({
   data?: any;
   excludeUserIds?: string[];
 }): Promise<void> {
+  console.log('🔔 [notifyAllMembers] Début', {
+    wishlistId,
+    type,
+    title,
+    excludeUserIds,
+  });
+
   try {
     // 1️⃣ Récupérer l'owner de la liste
-    const { data: wishlist } = await supabase
+    const { data: wishlist, error: wishlistError } = await supabase
       .from('wishlists')
-      .select('user_id')
+      .select('owner_id')
       .eq('id', wishlistId)
       .single();
 
-    if (!wishlist) {
-      console.error('❌ Liste introuvable:', wishlistId);
+    if (wishlistError) {
+      console.error('❌ [notifyAllMembers] Erreur récup wishlist:', wishlistError);
       return;
     }
 
-    // 2️⃣ Récupérer tous les membres actifs (sauf owner et excludeUserIds)
-    const { data: members } = await supabase
+    if (!wishlist) {
+      console.error('❌ [notifyAllMembers] Liste introuvable:', wishlistId);
+      return;
+    }
+
+    console.log('✅ [notifyAllMembers] Owner trouvé:', wishlist.owner_id);
+
+    // 2️⃣ Récupérer tous les membres actifs
+    const { data: members, error: membersError } = await supabase
       .from('wishlist_members')
       .select('user_id')
       .eq('wishlist_id', wishlistId)
       .eq('status', 'actif')
-      .neq('user_id', wishlist.user_id) // ⬅️ Exclure l'owner
-      .not('user_id', 'in', `(${excludeUserIds.join(',')})`); // ⬅️ Exclure les IDs spécifiés
+      .neq('user_id', wishlist.owner_id); // ⬅️ Exclure l'owner
 
-    if (!members || members.length === 0) {
-      console.log('⏭️ Aucun membre à notifier sur cette liste');
+    if (membersError) {
+      console.error('❌ [notifyAllMembers] Erreur récup membres:', membersError);
+      return;
+    }
+
+    console.log('📊 [notifyAllMembers] Membres actifs bruts:', members?.length, members);
+
+    // ⬅️ Filtrer les excludeUserIds manuellement
+    const filteredMembers = (members || []).filter(
+      (member) => !excludeUserIds.includes(member.user_id)
+    );
+
+    console.log('📊 [notifyAllMembers] Membres après filtrage:', filteredMembers.length, filteredMembers);
+
+    if (filteredMembers.length === 0) {
+      console.log('⏭️ [notifyAllMembers] Aucun membre à notifier');
       return;
     }
 
     // 3️⃣ Créer une notification pour chaque membre
-    const notifications = members.map((member) =>
-      createNotification({
+    const notifications = filteredMembers.map((member) => {
+      console.log('📤 [notifyAllMembers] Création notif pour:', member.user_id);
+      return createNotification({
         userId: member.user_id,
         type,
         title,
         message,
         data,
-      })
-    );
+      });
+    });
 
     await Promise.all(notifications);
-    console.log(`✅ ${members.length} membre(s) notifié(s)`);
+    console.log(`✅ [notifyAllMembers] ${filteredMembers.length} membre(s) notifié(s)`);
   } catch (error) {
-    console.error('❌ Erreur notification membres:', error);
+    console.error('❌ [notifyAllMembers] Exception:', error);
   }
 }
 

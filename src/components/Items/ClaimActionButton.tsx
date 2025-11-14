@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
-import { notifyAllMembers } from '../../hooks/useNotifications'; // ⬅️ IMPORTER
+import { notifyAllMembers } from '../../hooks/useNotifications';
 import { FOCUS_RING } from '../../utils/constants';
 import type { Item } from '../../hooks/useItems';
 
@@ -80,6 +80,12 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
   const isReservedByOther = item.status === 'réservé' && !isMyReservation;
 
   const handleReserve = async () => {
+    console.log('🔵 [handleReserve] Début', {
+      wishlistId,
+      itemId: item.id,
+      userId: user?.id,
+    });
+
     if (!user) {
       showToast({ message: 'Connecte-toi pour réserver', type: 'error' });
       return;
@@ -94,13 +100,21 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
 
     try {
       // 1️⃣ Récupérer le slug de la wishlist pour la notification
-      const { data: wishlist } = await supabase
+      console.log('🔵 [handleReserve] Récupération wishlist...');
+      const { data: wishlist, error: wishlistError } = await supabase
         .from('wishlists')
         .select('slug, name')
         .eq('id', wishlistId)
         .single();
 
+      if (wishlistError) {
+        console.error('❌ [handleReserve] Erreur récup wishlist:', wishlistError);
+      } else {
+        console.log('✅ [handleReserve] Wishlist trouvée:', wishlist);
+      }
+
       // 2️⃣ Insérer le claim
+      console.log('🔵 [handleReserve] Insertion claim...');
       const { error: claimError } = await supabase
         .from('claims')
         .insert({
@@ -110,6 +124,8 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         });
 
       if (claimError) {
+        console.error('❌ [handleReserve] Erreur INSERT claim:', claimError);
+
         const pgCode = (claimError as any).code;
         const message = (claimError as any).message as string | undefined;
 
@@ -129,8 +145,12 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         return;
       }
 
+      console.log('✅ [handleReserve] Claim inséré');
+
       // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
       if (wishlist) {
+        console.log('🔔 [handleReserve] Appel notifyAllMembers...');
+
         await notifyAllMembers({
           wishlistId,
           type: 'reservation_cadeau',
@@ -141,16 +161,18 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
             itemId: item.id,
             itemName: item.title,
           },
-          excludeUserIds: [user.id], // ⬅️ Exclure celui qui réserve
+          excludeUserIds: [user.id],
         });
 
-        console.log('✅ Notifications envoyées aux membres');
+        console.log('✅ [handleReserve] notifyAllMembers terminé');
+      } else {
+        console.warn('⚠️ [handleReserve] Pas de wishlist, notifications non envoyées');
       }
 
       showToast({ message: '🎁 Cadeau réservé avec succès !', type: 'success' });
       onAction?.();
     } catch (error: any) {
-      console.error('❌ Exception handleReserve:', error);
+      console.error('❌ [handleReserve] Exception:', error);
       showToast({
         message: error?.message || 'Erreur lors de la réservation',
         type: 'error',
@@ -161,22 +183,39 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
   };
 
   const handleCancel = async () => {
+    console.log('🔵 [handleCancel] Début', {
+      wishlistId,
+      itemId: item.id,
+      userId: user?.id,
+    });
+
     if (!user) return;
 
     const confirmCancel = window.confirm('Annuler ta réservation ?');
-    if (!confirmCancel) return;
+    if (!confirmCancel) {
+      console.log('⏭️ [handleCancel] Annulation refusée par utilisateur');
+      return;
+    }
 
     setLoading(true);
 
     try {
       // 1️⃣ Récupérer le slug de la wishlist pour la notification
-      const { data: wishlist } = await supabase
+      console.log('🔵 [handleCancel] Récupération wishlist...');
+      const { data: wishlist, error: wishlistError } = await supabase
         .from('wishlists')
         .select('slug, name')
         .eq('id', wishlistId)
         .single();
 
+      if (wishlistError) {
+        console.error('❌ [handleCancel] Erreur récup wishlist:', wishlistError);
+      } else {
+        console.log('✅ [handleCancel] Wishlist trouvée:', wishlist);
+      }
+
       // 2️⃣ Supprimer le claim
+      console.log('🔵 [handleCancel] Suppression claim...');
       const { error: deleteError } = await supabase
         .from('claims')
         .delete()
@@ -184,6 +223,7 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         .eq('user_id', user.id);
 
       if (deleteError) {
+        console.error('❌ [handleCancel] Erreur DELETE claim:', deleteError);
         showToast({
           message: deleteError.message || "Erreur lors de l'annulation",
           type: 'error',
@@ -191,8 +231,12 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         return;
       }
 
+      console.log('✅ [handleCancel] Claim supprimé');
+
       // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
       if (wishlist) {
+        console.log('🔔 [handleCancel] Appel notifyAllMembers...');
+
         await notifyAllMembers({
           wishlistId,
           type: 'liberation_cadeau',
@@ -203,16 +247,18 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
             itemId: item.id,
             itemName: item.title,
           },
-          excludeUserIds: [user.id], // ⬅️ Exclure celui qui annule
+          excludeUserIds: [user.id],
         });
 
-        console.log('✅ Notifications envoyées aux membres');
+        console.log('✅ [handleCancel] notifyAllMembers terminé');
+      } else {
+        console.warn('⚠️ [handleCancel] Pas de wishlist, notifications non envoyées');
       }
 
       showToast({ message: '✅ Réservation annulée', type: 'success' });
       onAction?.();
     } catch (error: any) {
-      console.error('❌ Exception handleCancel:', error);
+      console.error('❌ [handleCancel] Exception:', error);
       showToast({
         message: error?.message || "Erreur lors de l'annulation",
         type: 'error',
