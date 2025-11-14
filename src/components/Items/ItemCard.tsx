@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Items/ItemCard.tsx
-// 🧠 Rôle : Card avec menu 3 points inline + ClaimActionButton
+// 🧠 Rôle : Card avec DropdownMenu unifié + ClaimActionButton
+// 🛠️ Auteur : Claude IA pour WishLists v7
 
-import { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { FOCUS_RING } from '../../utils/constants';
 import type { Item } from '../../hooks/useItems';
 import ClaimActionButton from '../Items/ClaimActionButton';
+import DropdownMenu, { type DropdownAction } from '../DropdownMenu';
 
 interface ItemCardProps {
   item: Item;
@@ -30,27 +32,11 @@ export default function ItemCard({
   onEdit,
 }: ItemCardProps) {
   const [copiedPromo, setCopiedPromo] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Promo mobile
   const promoBtnRef = useRef<HTMLButtonElement | null>(null);
   const promoMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [shouldMarquee, setShouldMarquee] = useState(false);
-
-  // ⬅️ Fermer le menu au clic extérieur
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpen]);
 
   useLayoutEffect(() => {
     if (!item.promo_code) {
@@ -91,17 +77,42 @@ export default function ItemCard({
     }
   };
 
-  const handleEdit = () => {
-    setMenuOpen(false);
-    onEdit?.(item);
-  };
-
-  const handleDelete = () => {
-    setMenuOpen(false);
-    if (confirm(`Supprimer "${item.title}" ?\nCette action est irréversible.`)) {
-      onDelete?.(item.id);
-    }
-  };
+  // 🎯 Actions du menu (utilisées par DropdownMenu)
+  const menuActions: DropdownAction[] = [
+    {
+      label: 'Modifier',
+      icon: (
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
+        </svg>
+      ),
+      onClick: () => onEdit?.(item),
+    },
+    {
+      label: 'Supprimer',
+      icon: (
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      ),
+      onClick: () => {
+        if (confirm(`Supprimer "${item.title}" ?\nCette action est irréversible.`)) {
+          onDelete?.(item.id);
+        }
+      },
+      variant: 'danger',
+    },
+  ];
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gray-100 transition-all">
@@ -122,7 +133,7 @@ export default function ItemCard({
 
             <div className="flex flex-col gap-1.5">
               {item.url && (
-                <a
+              <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -266,52 +277,11 @@ export default function ItemCard({
               </div>
 
               {isOwner && (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className={`p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition-all ${FOCUS_RING}`}
-                    title="Options"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                      <circle cx="12" cy="5" r="1.5" />
-                      <circle cx="12" cy="12" r="1.5" />
-                      <circle cx="12" cy="19" r="1.5" />
-                    </svg>
-                  </button>
-
-                  {menuOpen && (
-                    <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-2xl border border-gray-200 py-1 z-50">
-                      <button
-                        onClick={handleEdit}
-                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                        Modifier
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-all flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                        Supprimer
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <DropdownMenu
+                  actions={menuActions}
+                  ariaLabel={`Options pour ${item.title}`}
+                  className="flex-shrink-0"
+                />
               )}
             </div>
           </div>
@@ -418,7 +388,7 @@ export default function ItemCard({
           {/* Boutons DESKTOP */}
           <div className="flex gap-2 mt-auto">
             {item.url && (
-              <a
+            <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -439,51 +409,10 @@ export default function ItemCard({
             />
 
             {isOwner && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  className={`p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all ${FOCUS_RING} border border-gray-200`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <circle cx="12" cy="5" r="1.5" />
-                    <circle cx="12" cy="12" r="1.5" />
-                    <circle cx="12" cy="19" r="1.5" />
-                  </svg>
-                </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
-                    <button
-                      onClick={handleEdit}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-3"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                      Modifier
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-all flex items-center gap-3"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Supprimer
-                    </button>
-                  </div>
-                )}
-              </div>
+              <DropdownMenu
+                actions={menuActions}
+                ariaLabel={`Options pour ${item.title}`}
+              />
             )}
           </div>
         </div>
