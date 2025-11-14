@@ -71,7 +71,7 @@ export default function ListViewContent({
     description: string;
     url: string;
     image_url: string;
-    price: number | null;
+    price: number ;
     priority: 'basse' | 'moyenne' | 'haute';
     size: string;
     color: string;

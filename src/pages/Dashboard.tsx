@@ -238,7 +238,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteList = async (wishlistId: string, name: string) => {
+  const handleDeleteList = async (wishlistId: string, _name: string) => {
     try {
       const result = await deleteWishlist(wishlistId);
       if (result && result.action !== 'cancelled') {
