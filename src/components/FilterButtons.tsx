@@ -11,7 +11,6 @@ interface FilterButtonsProps {
     tous: number;
     disponible: number;
     réservé: number;
-    acheté: number;
   };
 }
 
