@@ -30,7 +30,7 @@ export const THEMES = {
   },
   'autre': {
     label: 'Autre 🎁',
-    colors: ['#6b7280', '#9ca3af', '#d1d5db'],
+    colors: ['#7c3aed', '#ec4899', '#06b6d4'],
     banner: 'other'
   }
 } as const;
