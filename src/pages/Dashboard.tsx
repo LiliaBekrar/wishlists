@@ -272,7 +272,7 @@ console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wish
               name,
               slug,
               owner_id,
-              profiles:owner_id(username, pseudo)
+              profiles:owner_id(username, display_name)
             `)
             .eq('id', claim.items.wishlist_id)
             .single();
@@ -297,7 +297,7 @@ console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wish
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-2">
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                Bonjour {user?.display_name || user?.email?.split('@')[0]} !
+                Bonjour {user?.display_name || user?.username || user?.email?.split('@')[0]} !
               </span>
               <span className="ml-2 icon-shake-once">👋</span>
             </h1>

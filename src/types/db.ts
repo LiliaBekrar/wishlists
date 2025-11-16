@@ -9,7 +9,7 @@ export interface Profile {
   id: string;
   email: string;
   display_name: string;
-  username: string | null;
+  username: string;
   bio: string | null;
   notifications_enabled: boolean;
   created_at: string;
@@ -45,7 +45,7 @@ export interface Item {
   url: string | null;
   image_url: string | null;
   priority: 'haute' | 'moyenne' | 'basse'; // ⬅️ Français correct
-  status: 'disponible' | 'réservé' | 'acheté'; // ⬅️ Français correct
+  status: 'disponible' | 'réservé'; // ⬅️ Français correct
   created_at: string;
   updated_at: string;
 
@@ -58,7 +58,7 @@ export interface Claim {
   id: string;
   item_id: string;
   user_id: string;
-  status: 'réservé' | 'acheté' | 'libéré'; // ⬅️ Français correct
+  status: 'réservé' | 'libéré'; // ⬅️ Français correct
   purchased_at: string | null;
   created_at: string;
   updated_at: string;

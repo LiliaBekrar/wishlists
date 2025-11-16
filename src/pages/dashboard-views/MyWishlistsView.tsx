@@ -62,10 +62,36 @@ export default function MyWishlistsView({
         </p>
         <button
           onClick={onCreateList}
-          className={`inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 ${FOCUS_RING}`}
+          className={`group inline-flex items-center gap-3
+            bg-gradient-to-r from-purple-600 to-blue-600
+            hover:from-purple-700 hover:to-blue-700
+            text-white font-semibold px-6 py-3
+            rounded-xl shadow-lg
+            transition-all duration-200
+            hover:shadow-xl hover:scale-[1.04]
+            hover:brightness-110
+            ${FOCUS_RING}`}
         >
-          <span>➕ Créer ma première liste</span>
+          <svg
+            className="w-6 h-6 icon-bounce-active transition-all duration-200
+              group-hover:scale-110 group-hover:rotate-90 group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={3.5}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+
+          <span>Créer ma première liste</span>
         </button>
+
+
+
       </div>
     );
   }
@@ -79,11 +105,24 @@ export default function MyWishlistsView({
         </h2>
         <button
           onClick={onCreateList}
-          className={`inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-xl transition-all ${FOCUS_RING}`}
+          className={`inline-flex items-center gap-2
+            bg-gradient-to-r from-purple-600 to-blue-600
+            hover:from-purple-700 hover:to-blue-700
+            text-white font-semibold px-4 py-2
+            rounded-xl shadow-lg hover:shadow-xl
+            transition-all hover:scale-105
+            ${FOCUS_RING}`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
           </svg>
+
+          {/* Texte seulement en écran ≥ sm */}
           <span className="hidden sm:inline">Nouvelle liste</span>
         </button>
       </div>

@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuthStore } from "../store/authStore";
 import type { User } from "@supabase/supabase-js";
-import type { Profile } from '../types/db';
+import type { Profile } from "../types/db";
 
 // Fallback unique et centralisé pour garantir un email string
 const safeEmail = (email?: string) => email ?? "no-email@wishlists.app";
@@ -14,29 +14,33 @@ const safeEmail = (email?: string) => email ?? "no-email@wishlists.app";
 // Construit un "profile virtuel" cohérent avec ton schéma
 function buildVirtualProfile(user: User): Profile {
   const meta = user.user_metadata as any;
-
   const email = safeEmail(user.email); // ✅ jamais undefined
 
-  // On fabrique un display_name toujours string
+  const baseFromEmail = email.includes("@") ? email.split("@")[0] : email;
+
+  // display_name lisible pour l'UI
   const displayName =
-    meta?.pseudo ??
     meta?.full_name ??
     meta?.name ??
-    email.split('@')[0]; // fallback simple
+    baseFromEmail;
+
+  // username virtuel aligné avec ce qu'on a mis en DB
+  const username =
+    meta?.username ??
+    baseFromEmail;
 
   return {
-  id: user.id,
-  email,
-  display_name: displayName, // ✅ string, pas null
-  username: meta?.username ?? null,
-  bio: meta?.bio ?? null,
-  notifications_enabled: true,
-  created_at: user.created_at, // string ISO
-  updated_at: user.created_at,
-  user_metadata: undefined,
-};
+    id: user.id,
+    email,
+    display_name: displayName,
+    username,
+    bio: meta?.bio ?? null,
+    notifications_enabled: true,
+    created_at: user.created_at, // string ISO
+    updated_at: user.created_at,
+    user_metadata: undefined,
+  };
 }
-
 
 export function useAuth() {
   const { user, loading, setUser, setLoading } = useAuthStore();
@@ -63,26 +67,26 @@ export function useAuth() {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("📍 Auth event:", event);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("📍 Auth event:", event);
 
-        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
-          const virtualProfile = buildVirtualProfile(session.user);
-          console.log("✅ Profile virtuel créé:", virtualProfile);
-          setUser(virtualProfile);
-          setLoading(false);
-          return;
-        }
-
-        if (event === "SIGNED_OUT") {
-          console.log("👋 SIGNED_OUT");
-          setUser(null);
-          setLoading(false);
-          return;
-        }
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+        const virtualProfile = buildVirtualProfile(session.user);
+        console.log("✅ Profile virtuel créé:", virtualProfile);
+        setUser(virtualProfile);
+        setLoading(false);
+        return;
       }
-    );
+
+      if (event === "SIGNED_OUT") {
+        console.log("👋 SIGNED_OUT");
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, [setUser, setLoading]);
