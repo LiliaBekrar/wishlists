@@ -47,6 +47,12 @@ export default function Header() {
                 >
                   Dashboard
                 </Link>
+                                <Link
+                  to="/profile"
+                  className={`text-gray-700 hover:text-blue-600 font-medium ${FOCUS_RING} px-4 py-2 rounded-lg hover:bg-blue-50 transition-all`}
+                >
+                  Mon profil
+                </Link>
 
                 <NotificationBadge />
 
