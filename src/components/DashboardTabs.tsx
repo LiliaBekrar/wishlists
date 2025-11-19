@@ -12,6 +12,7 @@ interface DashboardTabsProps {
     myLists: number;
     memberLists: number;
     myClaims: number;
+    activeBudgets: number;
   };
 }
 
@@ -43,8 +44,8 @@ export default function DashboardTabs({
       id: 'budgets' as DashboardTab,
       label: 'Budgets',
       icon: '💰',
-      count: 0,
-      disabled: true,
+      count: counts.activeBudgets || 0,
+      disabled: false,
     },
   ];
 

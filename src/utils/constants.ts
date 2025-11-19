@@ -93,3 +93,103 @@ export const ITEM_SORT_OPTIONS = [
   { value: 'date-desc', label: 'Plus récents', icon: '📅' },
   { value: 'date-asc', label: 'Plus anciens', icon: '📅' }
 ] as const;
+
+// ============================================================
+// 💰 BUDGETS - Constantes pour la gestion des budgets
+// ⚙️ Paramètres à personnaliser
+// ============================================================
+
+// Labels des types de budgets
+export const BUDGET_TYPE_LABELS = {
+  'annuel': '📅 Annuel',
+  'noël': '🎄 Noël',
+  'anniversaire': '🎂 Anniversaire',
+  'naissance': '👶 Naissance',
+  'mariage': '💍 Mariage',
+  'autre': '🎁 Autre',
+  'personnalisé': '✏️ Personnalisé'
+} as const;
+
+// Seuils de couleur pour les budgets (% utilisé)
+export const BUDGET_THRESHOLDS = {
+  GREEN: 90,  // < 90% → 🟢 Vert
+  ORANGE: 100 // 90-99% → 🟠 Orange | ≥100% → 🔴 Rouge
+}; // ⬅️ Modifiez ici pour ajuster les seuils
+
+// Couleurs pour le donut chart (répartition par personne/thème/liste)
+export const DONUT_COLORS = [
+  '#3B82F6', // Bleu
+  '#10B981', // Vert
+  '#F59E0B', // Orange
+  '#EF4444', // Rouge
+  '#8B5CF6', // Violet
+  '#EC4899', // Rose
+  '#14B8A6', // Teal
+  '#F97316', // Orange foncé
+  '#06B6D4', // Cyan
+  '#84CC16', // Lime
+]; // ⬅️ Modifiez ici pour changer les couleurs du donut
+
+// Labels des thèmes (réutilisés depuis THEMES)
+export const THEME_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(THEMES).map(([key, value]) => [key, value.label])
+);
+
+// Périodes des budgets automatiques (pour calculs et affichage)
+// IMPORTANT : Toutes les périodes sont 1er janv → 31 déc (année civile)
+export const BUDGET_PERIODS = {
+  ANNUEL: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Année civile complète'
+  }, // ⬅️ Annuel : 1er janv → 31 déc
+
+  noël: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Tous les cadeaux Noël de l\'année'
+  }, // ⬅️ Noël : 1er janv → 31 déc
+
+  ANNIVERSAIRE: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Tous les cadeaux anniversaire de l\'année'
+  }, // ⬅️ Anniversaire : 1er janv → 31 déc
+
+  NAISSANCE: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Tous les cadeaux naissance de l\'année'
+  }, // ⬅️ Naissance : 1er janv → 31 déc
+
+  MARIAGE: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Tous les cadeaux mariage de l\'année'
+  }, // ⬅️ Mariage : 1er janv → 31 déc
+
+  AUTRE: {
+    start: '01-01',
+    end: '12-31',
+    description: 'Tous les cadeaux "autre" de l\'année'
+  }, // ⬅️ Autre : 1er janv → 31 déc
+} as const;
+
+// Mapping type budget → période (pour faciliter les calculs)
+export const BUDGET_TYPE_TO_PERIOD: Record<string, keyof typeof BUDGET_PERIODS> = {
+  'annuel': 'ANNUEL',
+  'noël': 'noël',
+  'anniversaire': 'ANNIVERSAIRE',
+  'naissance': 'NAISSANCE',
+  'mariage': 'MARIAGE',
+  'autre': 'AUTRE'
+};
+
+// Limites de formulaires
+export const VALIDATION = {
+  USERNAME_MIN_LENGTH: 3,
+  USERNAME_MAX_LENGTH: 30,
+  RECIPIENT_NAME_MAX_LENGTH: 50,
+  BUDGET_NAME_MAX_LENGTH: 100,
+  DESCRIPTION_MAX_LENGTH: 500,
+}; // ⬅️ Modifiez ici pour ajuster les validations

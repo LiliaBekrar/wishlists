@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/types/db.ts
 // 🧠 Rôle : Types TypeScript de base
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 // ⚙️ PROFILES
 export interface Profile {
@@ -123,8 +123,8 @@ export interface BudgetGoal {
   user_id: string;
   name: string;
   type: 'annuel' | 'noël' | 'anniversaire' | 'naissance' | 'mariage' | 'autre' | 'personnalisé';
-  year?: number; // NULL pour budgets personnalisés
-  limit_amount?: number; // NULL = illimité
+  year?: number | null; // NULL pour budgets personnalisés
+  limit_amount?: number | null; // NULL = illimité
   created_at: string;
   updated_at: string;
 }
@@ -147,7 +147,7 @@ export interface ListBudgetLimit {
   id: string;
   wishlist_id: string;
   user_id: string;
-  limit_amount: number;
+  limit_amount: number | null;
   created_at: string;
   updated_at: string;
 }

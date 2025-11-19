@@ -15,6 +15,7 @@ import DashboardTabs, { type DashboardTab } from '../components/DashboardTabs';
 import MyWishlistsView from './dashboard-views/MyWishlistsView';
 import MemberWishlistsView from './dashboard-views/MemberWishlistsView';
 import MyClaimsView from './dashboard-views/MyClaimsView';
+import BudgetsView from './dashboard-views/BudgetsView';
 import Toast from '../components/Toast';
 
 export default function Dashboard() {
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [memberWishlists, setMemberWishlists] = useState<any[]>([]);
   const [myClaims, setMyClaims] = useState<any[]>([]);
+  const [budgetCount, setBudgetCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Modals
@@ -50,154 +52,211 @@ export default function Dashboard() {
   }>({ open: false, wishlist: null });
 
   // ⬅️ Charger toutes les données (SANS useCallback pour éviter la boucle)
-useEffect(() => {
-  const loadData = async () => {
-    if (!user) {
-      console.log('⏭️ Pas d\'utilisateur connecté');
-      setDataLoading(false);
-      return;
-    }
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) {
+        console.log('⏭️ Pas d\'utilisateur connecté');
+        setDataLoading(false);
+        return;
+      }
 
-    console.log('🔵 Chargement des données Dashboard pour:', user.id);
-    setDataLoading(true);
+      console.log('🔵 Chargement des données Dashboard pour:', user.id);
+      setDataLoading(true);
 
-    try {
-      // 1️⃣ Compteurs items + membres (pour mes listes)
-      if (wishlists.length > 0) {
-        const ids = wishlists.map((w) => w.id);
+      try {
+        // 1️⃣ Compteurs items + membres (pour mes listes)
+        if (wishlists.length > 0) {
+          const ids = wishlists.map((w) => w.id);
 
-        // Items counts
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('items')
-          .select('id, wishlist_id')
-          .in('wishlist_id', ids);
+          // Items counts
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('items')
+            .select('id, wishlist_id')
+            .in('wishlist_id', ids);
 
-        if (itemsError) {
-          console.error('❌ Erreur chargement items:', itemsError);
-        } else {
-          const iCounts: Record<string, number> = {};
-          for (const item of itemsData ?? []) {
-            iCounts[item.wishlist_id] = (iCounts[item.wishlist_id] || 0) + 1;
+          if (itemsError) {
+            console.error('❌ Erreur chargement items:', itemsError);
+          } else {
+            const iCounts: Record<string, number> = {};
+            for (const item of itemsData ?? []) {
+              iCounts[item.wishlist_id] = (iCounts[item.wishlist_id] || 0) + 1;
+            }
+            setItemCounts(iCounts);
+            console.log('✅ Items counts chargés:', iCounts);
           }
-          setItemCounts(iCounts);
-          console.log('✅ Items counts chargés:', iCounts);
+
+          // Members counts
+          const { data: membersData, error: membersError } = await supabase
+            .from('wishlist_members')
+            .select('wishlist_id')
+            .in('wishlist_id', ids)
+            .eq('status', 'actif');
+
+          if (membersError) {
+            console.error('❌ Erreur chargement membres:', membersError);
+          } else {
+            const mCounts: Record<string, number> = {};
+            for (const m of membersData ?? []) {
+              mCounts[m.wishlist_id] = (mCounts[m.wishlist_id] || 0) + 1;
+            }
+            setMemberCounts(mCounts);
+            console.log('✅ Members counts chargés:', mCounts);
+          }
         }
 
-        // Members counts
-        const { data: membersData, error: membersError } = await supabase
+        // 2️⃣ Listes où je suis membre
+        console.log('🔵 Chargement listes membres...');
+        const { data: memberLists, error: memberListsError } = await supabase
           .from('wishlist_members')
-          .select('wishlist_id')
-          .in('wishlist_id', ids)
-          .eq('status', 'actif');
-
-        if (membersError) {
-          console.error('❌ Erreur chargement membres:', membersError);
-        } else {
-          const mCounts: Record<string, number> = {};
-          for (const m of membersData ?? []) {
-            mCounts[m.wishlist_id] = (mCounts[m.wishlist_id] || 0) + 1;
-          }
-          setMemberCounts(mCounts);
-          console.log('✅ Members counts chargés:', mCounts);
-        }
-      }
-
-      // 2️⃣ Listes où je suis membre
-      console.log('🔵 Chargement listes membres...');
-      const { data: memberLists, error: memberListsError } = await supabase
-        .from('wishlist_members')
-        .select(`
-          wishlist_id,
-          user_id,
-          status,
-          role,
-          wishlists!inner(
-            id,
-            name,
-            slug,
-            theme,
-            description,
-            owner_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'actif');
-
-      if (memberListsError) {
-        console.error('❌ Erreur chargement listes membres:', memberListsError);
-        console.error('Details:', memberListsError.details);
-        console.error('Hint:', memberListsError.hint);
-        console.error('Code:', memberListsError.code);
-      } else {
-        console.log('🔵 Listes membres brutes:', memberLists?.length, memberLists);
-
-        // Reformater pour correspondre à l'interface MemberWishlist
-        const formatted = (memberLists || []).map((member: any) => ({
-          wishlist_id: member.wishlist_id,
-          user_id: member.user_id,
-          role: member.role,
-          status: member.status,
-          wishlist: {
-            id: member.wishlists.id,
-            name: member.wishlists.name,
-            slug: member.wishlists.slug,
-            theme: member.wishlists.theme,
-            description: member.wishlists.description
-          }
-        }));
-
-        setMemberWishlists(formatted);
-        console.log('✅ Listes membres formatées:', formatted.length, formatted);
-      }
-
-      // 3️⃣ Mes claims (réservations)
-      console.log('🔵 Chargement mes claims...');
-      const { data: claims, error: claimsError } = await supabase
-        .from('claims')
-        .select(`
-          id,
-          created_at,
-          status,
-          items!inner(
-            id,
-            title,
-            price,
-            url,
-            image_url,
-            priority,
-            status,
+          .select(`
             wishlist_id,
-            original_wishlist_name,
-            original_owner_id,
-            wishlists (
+            user_id,
+            status,
+            role,
+            wishlists!inner(
               id,
               name,
               slug,
+              theme,
+              description,
               owner_id
             )
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'réservé')
-        .order('created_at', { ascending: false });
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'actif');
 
-      if (claimsError) {
-        console.error('❌ Erreur chargement claims:', claimsError);
-      } else {
-        console.log('✅ Claims chargés:', claims?.length);
-        console.log('🔍 Premier claim:', claims?.[0]);
-console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wishlists);
-        setMyClaims(claims || []);
+        if (memberListsError) {
+          console.error('❌ Erreur chargement listes membres:', memberListsError);
+        } else {
+          console.log('🔵 Listes membres brutes:', memberLists?.length, memberLists);
+
+          const formatted = (memberLists || []).map((member: any) => ({
+            wishlist_id: member.wishlist_id,
+            user_id: member.user_id,
+            role: member.role,
+            status: member.status,
+            wishlist: {
+              id: member.wishlists.id,
+              name: member.wishlists.name,
+              slug: member.wishlists.slug,
+              theme: member.wishlists.theme,
+              description: member.wishlists.description
+            }
+          }));
+
+          setMemberWishlists(formatted);
+          console.log('✅ Listes membres formatées:', formatted.length, formatted);
+        }
+
+        // 3️⃣ Mes claims (réservations)
+        console.log('🔵 Chargement mes claims...');
+        const { data: claims, error: claimsError } = await supabase
+          .from('claims')
+          .select(`
+            id,
+            created_at,
+            reserved_at,
+            status,
+            items!inner(
+              id,
+              title,
+              price,
+              url,
+              image_url,
+              priority,
+              status,
+              wishlist_id,
+              original_wishlist_name,
+              original_owner_id,
+              wishlists (
+                id,
+                name,
+                slug,
+                owner_id,
+                theme
+              )
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'réservé')
+          .order('created_at', { ascending: false });
+
+        if (claimsError) {
+          console.error('❌ Erreur chargement claims:', claimsError);
+        } else {
+          console.log('✅ Claims chargés:', claims?.length);
+          setMyClaims(claims || []);
+
+          // 4️⃣ Calculer le nombre de budgets actifs
+          console.log('🔵 Calcul budgets actifs...');
+          let activeBudgetsCount = 0;
+
+          if (claims && claims.length > 0) {
+            const currentYear = new Date().getFullYear();
+            const themes = new Set<string>();
+
+            // Compter combien de thèmes différents ont au moins 1 cadeau
+            claims.forEach((claim: any) => {
+              const claimDate = claim.reserved_at || claim.created_at;
+              if (claimDate) {
+                const claimYear = new Date(claimDate).getFullYear();
+                if (claimYear === currentYear) {
+                  const theme = claim.items?.wishlists?.theme || 'autre';
+                  themes.add(theme);
+                }
+              }
+            });
+
+            // Budget annuel + budgets par thème
+            activeBudgetsCount = 1 + themes.size;
+            console.log('✅ Budgets actifs:', activeBudgetsCount, '(1 annuel +', themes.size, 'thèmes)');
+          }
+
+          // Récupérer aussi les external_gifts pour compter les budgets
+          const { data: externalGifts } = await supabase
+            .from('external_gifts')
+            .select('theme, purchase_date')
+            .eq('user_id', user.id);
+
+          if (externalGifts && externalGifts.length > 0) {
+            const currentYear = new Date().getFullYear();
+            const externalThemes = new Set<string>();
+
+            externalGifts.forEach((gift: any) => {
+              const giftYear = new Date(gift.purchase_date).getFullYear();
+              if (giftYear === currentYear) {
+                externalThemes.add(gift.theme);
+              }
+            });
+
+            // Si on a des external gifts, on a au moins le budget annuel
+            if (externalThemes.size > 0 && activeBudgetsCount === 0) {
+              activeBudgetsCount = 1 + externalThemes.size;
+            } else {
+              // Fusionner les thèmes
+              externalThemes.forEach(theme => {
+                if (![...claims || []].some((c: any) =>
+                  (c.items?.wishlists?.theme || 'autre') === theme
+                )) {
+                  activeBudgetsCount++;
+                }
+              });
+            }
+
+            console.log('✅ Budgets actifs finaux (avec external):', activeBudgetsCount);
+          }
+
+          setBudgetCount(activeBudgetsCount);
+        }
+      } catch (error) {
+        console.error('❌ Erreur globale chargement données:', error);
+      } finally {
+        setDataLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Erreur globale chargement données:', error);
-    } finally {
-      setDataLoading(false);
-    }
-  };
+    };
 
-  loadData();
-}, [user?.id, wishlists.length]);
+    loadData();
+  }, [user?.id, wishlists.length]);
 
   // Handlers
   const handleSubmitList = async (data: any) => {
@@ -325,6 +384,7 @@ console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wish
             myLists: wishlists.length,
             memberLists: memberWishlists.length,
             myClaims: myClaims.length,
+            activeBudgets: budgetCount,
           }}
         />
 
@@ -376,6 +436,10 @@ console.log('🔍 Wishlist du premier claim:', (claims?.[0] as any)?.items?.wish
                 claims={myClaims}
                 onRefresh={handleRefreshClaims}
               />
+            )}
+
+            {activeTab === 'budgets' && (
+              <BudgetsView />
             )}
           </>
         )}

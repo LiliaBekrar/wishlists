@@ -12,6 +12,7 @@ import AuthCallback from './pages/AuthCallback';
 import Privacy from './pages/Privacy';
 import ProfilePrivate from './pages/ProfilePrivate';
 import ProfilePublic from './pages/ProfilePublic';
+import { Budget } from './Tests/TestBudget';
 
 // ⬅️ Détecter l'environnement pour le basename
 const basename = import.meta.env.MODE === 'production' ? '/wishlists' : '';
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePrivate /></ProtectedRoute>} />
             <Route path="/profile/:username" element={<ProfilePublic />} />
+            <Route path="/budget" element={<Budget />} />
             <Route
               path="/dashboard"
               element={
