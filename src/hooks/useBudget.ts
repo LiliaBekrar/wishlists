@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/hooks/useBudget.ts (VERSION FINALE CORRIGÉE)
 // 🧠 Rôle : Hook pour gérer les budgets (auto calculés dynamiquement + manuels en BDD)

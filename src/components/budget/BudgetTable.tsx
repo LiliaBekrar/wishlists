@@ -1,7 +1,6 @@
 // 📄 src/components/budget/BudgetTable.tsx
 // 🧠 Rôle : Tableau détaillé des dépenses (liste des cadeaux)
 
-import React from 'react';
 import type { Claim, ExternalGift } from '../../types/db';
 import { formatPrice, formatDate } from '../../utils/format';
 import { THEME_LABELS } from '../../utils/constants';

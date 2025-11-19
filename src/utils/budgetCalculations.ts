@@ -71,7 +71,7 @@ export function filterRelevantBudgets(budgets: BudgetGoal[]): BudgetGoal[] {
  */
 export function isDateInBudgetPeriod(
   date: string | Date,
-  budgetType: string,
+  _budgetType: string,
   budgetYear: number
 ): boolean {
   const d = typeof date === 'string' ? new Date(date) : date;

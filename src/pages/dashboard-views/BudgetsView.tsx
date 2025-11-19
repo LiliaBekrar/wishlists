@@ -2,7 +2,7 @@
 // 🧠 Rôle : Vue Budgets intégrée au Dashboard (VERSION FINALE v3)
 
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useBudget, useBudgetDonutData } from '../../hooks/useBudget';
 import { BudgetCard } from '../../components/budget/BudgetCard';

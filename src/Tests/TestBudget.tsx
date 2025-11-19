@@ -2,7 +2,7 @@
 // 🧠 Rôle : Page des budgets avec design cohérent
 
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBudget, useBudgetDonutData } from '../hooks/useBudget';
 import { BudgetCard } from '../components/budget/BudgetCard';

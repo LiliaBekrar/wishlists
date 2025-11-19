@@ -3,7 +3,7 @@
 // 🧠 Rôle : Donut chart interactif avec tooltip toggle (click)
 
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import type { BudgetViewMode } from '../../types/db';
 import { formatPrice } from '../../utils/format';
