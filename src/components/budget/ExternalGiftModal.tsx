@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/budget/ExternalGiftModal.tsx
 // 🧠 Rôle : Modal pour ajouter un cadeau acheté hors-app (style AddItemModal)
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -318,24 +318,55 @@ async function fetchRecipients() {
             </div>
 
             {recipientType === 'existing' ? (
-              <select
-                value={selectedRecipient?.id || ''}
-                onChange={(e) => {
-                  const recipient = recipients.find((r) => r.id === e.target.value);
-                  setSelectedRecipient(recipient || null);
-                }}
-                required
-                className={`w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl transition-all ${FOCUS_RING} hover:border-green-300`}
-                disabled={loading}
-              >
-                <option value="">-- Sélectionnez un destinataire --</option>
-                {recipients.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} {r.type === 'profile' ? '👤' : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedRecipient?.id || ''}
+                  onChange={(e) => {
+                    const recipient = recipients.find((r) => r.id === e.target.value);
+                    setSelectedRecipient(recipient || null);
+                  }}
+                  required
+                  disabled={loading}
+                  className={`
+                    w-full
+                    pe-10 ps-4 py-3
+                    text-sm sm:text-base
+                    border-2 rounded-xl
+                    bg-white
+                    shadow-sm
+                    appearance-none
+                    ${FOCUS_RING}
+                    border-gray-200 hover:border-green-300
+                    disabled:bg-gray-100 disabled:text-gray-400
+                    transition-all
+                  `}
+                >
+                  <option value="">-- Sélectionnez un destinataire --</option>
+                  {recipients.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.type === 'profile' ? '👤' : ''}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Chevron custom à droite */}
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.118l3.71-3.887a.75.75 0 111.08 1.04l-4.24 4.445a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
             ) : (
+
               <input
                 type="text"
                 value={newRecipientName}

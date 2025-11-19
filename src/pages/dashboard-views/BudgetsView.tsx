@@ -1,6 +1,6 @@
 // 📄 src/pages/dashboard-views/BudgetsView.tsx
 // 🧠 Rôle : Vue Budgets intégrée au Dashboard (VERSION FINALE v3)
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -131,7 +131,7 @@ export default function BudgetsView() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>Ajouter un cadeau</span>
+            <span>Ajouter un cadeau hors app</span>
           </button>
         </div>
       </div>

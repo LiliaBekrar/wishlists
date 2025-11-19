@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/budget/BudgetDonut.tsx
 // 🧠 Rôle : Donut chart interactif avec tooltip toggle (click)
-// 🛠️ Auteur : Claude IA pour WishLists v7
+
 
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
