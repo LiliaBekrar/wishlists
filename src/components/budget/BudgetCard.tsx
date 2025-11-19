@@ -1,7 +1,6 @@
 // 📄 src/components/budget/BudgetCard.tsx
 // 🧠 Rôle : Carte d'affichage d'un budget (version épurée)
 
-import React from 'react';
 import type { BudgetData } from '../../types/db';
 import { formatPrice } from '../../utils/format';
 import { BUDGET_TYPE_LABELS, FOCUS_RING } from '../../utils/constants';
