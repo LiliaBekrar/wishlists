@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Items/ClaimActionButton.tsx
-// 🧠 Rôle : Bouton réserver/annuler avec notifications aux membres
+// 🧠 Rôle : Bouton réserver/annuler avec nettoyage auto des items archivés
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -99,7 +99,7 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     setLoading(true);
 
     try {
-      // 1️⃣ Récupérer le slug de la wishlist pour la notification
+      // 1️⃣ Récupérer le slug de la wishlist
       console.log('🔵 [handleReserve] Récupération wishlist...');
       const { data: wishlist, error: wishlistError } = await supabase
         .from('wishlists')
@@ -191,7 +191,14 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
 
     if (!user) return;
 
-    const confirmCancel = window.confirm('Annuler ta réservation ?');
+    // ⬅️ Vérifier si l'item est archivé
+    const isArchived = item.wishlist_id === null && item.original_wishlist_name;
+
+    const confirmMessage = isArchived
+      ? `Ce cadeau a été retiré de la liste "${item.original_wishlist_name}".\n\nAnnuler ta réservation supprimera définitivement ce cadeau. Continuer ?`
+      : 'Annuler ta réservation ?';
+
+    const confirmCancel = window.confirm(confirmMessage);
     if (!confirmCancel) {
       console.log('⏭️ [handleCancel] Annulation refusée par utilisateur');
       return;
@@ -200,18 +207,22 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     setLoading(true);
 
     try {
-      // 1️⃣ Récupérer le slug de la wishlist pour la notification
-      console.log('🔵 [handleCancel] Récupération wishlist...');
-      const { data: wishlist, error: wishlistError } = await supabase
-        .from('wishlists')
-        .select('slug, name')
-        .eq('id', wishlistId)
-        .single();
+      // 1️⃣ Récupérer le slug de la wishlist (si pas archivé)
+      let wishlist = null;
+      if (!isArchived) {
+        console.log('🔵 [handleCancel] Récupération wishlist...');
+        const { data, error: wishlistError } = await supabase
+          .from('wishlists')
+          .select('slug, name')
+          .eq('id', wishlistId)
+          .single();
 
-      if (wishlistError) {
-        console.error('❌ [handleCancel] Erreur récup wishlist:', wishlistError);
-      } else {
-        console.log('✅ [handleCancel] Wishlist trouvée:', wishlist);
+        if (wishlistError) {
+          console.error('❌ [handleCancel] Erreur récup wishlist:', wishlistError);
+        } else {
+          wishlist = data;
+          console.log('✅ [handleCancel] Wishlist trouvée:', wishlist);
+        }
       }
 
       // 2️⃣ Supprimer le claim
@@ -233,7 +244,38 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
 
       console.log('✅ [handleCancel] Claim supprimé');
 
-      // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
+      // 3️⃣ Si archivé → SUPPRIMER L'ITEM définitivement
+      if (isArchived) {
+        console.log('🗑️ [handleCancel] Item archivé → suppression définitive');
+
+        // Vérifier qu'il n'y a plus d'autres claims actifs
+        const { data: activeClaims, error: activeClaimsError } = await supabase
+          .from('claims')
+          .select('id')
+          .eq('item_id', item.id)
+          .eq('status', 'réservé');
+
+        if (activeClaimsError) {
+          console.error('❌ [handleCancel] Erreur check claims:', activeClaimsError);
+        }
+
+        if (!activeClaims || activeClaims.length === 0) {
+          const { error: deleteItemError } = await supabase
+            .from('items')
+            .delete()
+            .eq('id', item.id);
+
+          if (deleteItemError) {
+            console.error('❌ [handleCancel] Erreur DELETE item:', deleteItemError);
+          } else {
+            console.log('✅ [handleCancel] Item archivé supprimé définitivement');
+          }
+        } else {
+          console.log('⚠️ [handleCancel] D\'autres claims existent, item conservé');
+        }
+      }
+
+      // 4️⃣ Notifier tous les membres (sauf si archivé)
       if (wishlist) {
         console.log('🔔 [handleCancel] Appel notifyAllMembers...');
 
@@ -252,7 +294,7 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
 
         console.log('✅ [handleCancel] notifyAllMembers terminé');
       } else {
-        console.warn('⚠️ [handleCancel] Pas de wishlist, notifications non envoyées');
+        console.log('⏭️ [handleCancel] Item archivé, pas de notification');
       }
 
       showToast({ message: '✅ Réservation annulée', type: 'success' });

@@ -1,6 +1,5 @@
 // 📄 src/hooks/useProfile.ts
-// 🧠 Rôle : Gérer les données de profil utilisateur
-// 🔧 Fix : Valeurs par défaut + slug unique
+// 🧠 Rôle : Gérer profil + export RGPD + suppression compte
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -10,8 +9,8 @@ export interface UserProfile {
   username: string;
   display_name: string | null;
   bio: string | null;
+  avatar_url: string | null;
   created_at: string;
-  // Stats (toujours définies avec valeur par défaut)
   total_wishlists: number;
   total_public_wishlists: number;
 }
@@ -26,7 +25,6 @@ export function useProfile(userId?: string) {
       setLoading(false);
       return;
     }
-
     fetchProfile();
   }, [userId]);
 
@@ -35,7 +33,6 @@ export function useProfile(userId?: string) {
 
     setLoading(true);
     try {
-      // Profil de base
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,7 +41,6 @@ export function useProfile(userId?: string) {
 
       if (profileError) throw profileError;
 
-      // Compter les listes
       const { count: totalCount } = await supabase
         .from('wishlists')
         .select('*', { count: 'exact', head: true })
@@ -56,7 +52,6 @@ export function useProfile(userId?: string) {
         .eq('owner_id', userId)
         .eq('visibility', 'publique');
 
-      // ⬅️ FIX : Valeurs par défaut garanties
       setProfile({
         ...profileData,
         total_wishlists: totalCount ?? 0,
@@ -85,11 +80,93 @@ export function useProfile(userId?: string) {
     await fetchProfile();
   };
 
+  const exportUserData = async () => {
+    if (!userId) throw new Error('User ID manquant');
+
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      const { data: wishlistsData } = await supabase
+        .from('wishlists')
+        .select('*, items (*)')
+        .eq('owner_id', userId);
+
+      const { data: claimsData } = await supabase
+        .from('claims')
+        .select('*, items (name, wishlists (name))')
+        .eq('user_id', userId);
+
+      const { data: budgetsData } = await supabase
+        .from('budget_goals')
+        .select('*')
+        .eq('user_id', userId);
+
+      const exportData = {
+        profile: profileData,
+        wishlists: wishlistsData,
+        claims: claimsData,
+        budgets: budgetsData,
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `wishlists-export-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      return true;
+    } catch (err) {
+      console.error('❌ Erreur export:', err);
+      throw err;
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!userId) throw new Error('User ID manquant');
+
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          deleted_at: new Date().toISOString(),
+          username: `deleted_${userId.slice(0, 8)}`,
+          display_name: null,
+          bio: null,
+          avatar_url: null,
+        })
+        .eq('id', userId);
+
+      if (profileError) throw profileError;
+
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
+
+      return true;
+    } catch (err) {
+      console.error('❌ Erreur suppression compte:', err);
+      throw err;
+    }
+  };
+
   return {
     profile,
     loading,
     error,
     updateProfile,
+    exportUserData,
+    deleteAccount,
     refetch: fetchProfile,
   };
 }

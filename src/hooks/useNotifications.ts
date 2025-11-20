@@ -11,7 +11,8 @@ export type NotificationType =
   | 'acces_accorde'
   | 'acces_refuse'
   | 'reservation_cadeau'
-  | 'liberation_cadeau';
+  | 'liberation_cadeau'
+  | 'cadeau_supprime';
 
 export interface Notification {
   id: string;

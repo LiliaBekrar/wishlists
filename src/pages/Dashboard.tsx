@@ -24,6 +24,9 @@ export default function Dashboard() {
   const { wishlists, loading, createWishlist, updateWishlist, deleteWishlist } = useWishlists();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // 🆕 Nom prioritaire issu de la table profiles
+  const [profileName, setProfileName] = useState<string | null>(null);
+
   // Tab actif
   const [activeTab, setActiveTab] = useState<DashboardTab>('my-lists');
 
@@ -52,11 +55,42 @@ export default function Dashboard() {
     wishlist: any | null;
   }>({ open: false, wishlist: null });
 
+  // 🆕 Charger le display_name / username depuis la table profiles
+  useEffect(() => {
+    const loadProfileName = async () => {
+      if (!user?.id) {
+        setProfileName(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, username')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ Erreur chargement profil:', error);
+        setProfileName(null);
+        return;
+      }
+
+      const nameFromProfile =
+        (data as any)?.display_name ||
+        (data as any)?.username ||
+        null;
+
+      setProfileName(nameFromProfile);
+    };
+
+    loadProfileName();
+  }, [user?.id]);
+
   // ⬅️ Charger toutes les données (SANS useCallback pour éviter la boucle)
   useEffect(() => {
     const loadData = async () => {
       if (!user) {
-        console.log('⏭️ Pas d\'utilisateur connecté');
+        console.log("⏭️ Pas d'utilisateur connecté");
         setDataLoading(false);
         return;
       }
@@ -141,8 +175,8 @@ export default function Dashboard() {
               name: member.wishlists.name,
               slug: member.wishlists.slug,
               theme: member.wishlists.theme,
-              description: member.wishlists.description
-            }
+              description: member.wishlists.description,
+            },
           }));
 
           setMemberWishlists(formatted);
@@ -158,7 +192,7 @@ export default function Dashboard() {
             created_at,
             reserved_at,
             status,
-            items!inner(
+            items (
               id,
               title,
               price,
@@ -235,10 +269,12 @@ export default function Dashboard() {
               activeBudgetsCount = 1 + externalThemes.size;
             } else {
               // Fusionner les thèmes
-              externalThemes.forEach(theme => {
-                if (![...claims || []].some((c: any) =>
-                  (c.items?.wishlists?.theme || 'autre') === theme
-                )) {
+              externalThemes.forEach((theme) => {
+                if (
+                  ![...(claims || [])].some(
+                    (c: any) => (c.items?.wishlists?.theme || 'autre') === theme
+                  )
+                ) {
                   activeBudgetsCount++;
                 }
               });
@@ -305,7 +341,7 @@ export default function Dashboard() {
       .select(`
         id,
         created_at,
-        items!inner(
+        items (
           id,
           title,
           price,
@@ -347,6 +383,14 @@ export default function Dashboard() {
     console.log('✅ Claims rafraîchis');
   };
 
+  // 🧡 Nom affiché dans le Bonjour (priorité au profil)
+  const displayedName =
+    profileName ||
+    (user as any)?.display_name ||
+    (user as any)?.username ||
+    user?.email?.split('@')[0] ||
+    'toi';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -357,7 +401,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-2">
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                Bonjour {user?.display_name || user?.username || user?.email?.split('@')[0]} !
+                Bonjour {displayedName} !
               </span>
               <span className="ml-2 icon-shake-once">👋</span>
             </h1>
@@ -390,7 +434,7 @@ export default function Dashboard() {
         />
 
         {/* Loading */}
-        {(loading || dataLoading) ? (
+        {loading || dataLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <svg className="animate-spin h-12 w-12 mx-auto text-purple-600 mb-4" viewBox="0 0 24 24">
@@ -428,9 +472,7 @@ export default function Dashboard() {
               />
             )}
 
-            {activeTab === 'member-lists' && (
-              <MemberWishlistsView memberWishlists={memberWishlists} />
-            )}
+            {activeTab === 'member-lists' && <MemberWishlistsView memberWishlists={memberWishlists} />}
 
             {activeTab === 'my-claims' && (
               <MyClaimsView
@@ -439,9 +481,7 @@ export default function Dashboard() {
               />
             )}
 
-            {activeTab === 'budgets' && (
-              <BudgetsView />
-            )}
+            {activeTab === 'budgets' && <BudgetsView />}
           </>
         )}
       </div>

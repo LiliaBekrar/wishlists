@@ -308,6 +308,8 @@ export default function Notifications() {
         return '🎯';
       case 'liberation_cadeau':
         return '🔓';
+      case 'cadeau_supprime': // ⬅️ NOUVEAU
+        return '🗑️';
       default:
         return '📬';
     }
@@ -481,13 +483,29 @@ export default function Notifications() {
 
                       <p className="text-gray-700 text-sm mb-2">{notif.message}</p>
 
-                      {/* ⬅️ BOUTON "VOIR LA LISTE" pour toutes les notifications avec wishlistSlug */}
+                      {/* ⬅️ BOUTON "VOIR LA LISTE" pour wishlistSlug */}
                       {notif.data?.wishlistSlug && (
                         <button
-                          onClick={() => navigate(`/list/${notif.data.wishlistSlug}`)}
+                          onClick={() => {
+                            markAsRead(notif.id);
+                            navigate(`/list/${notif.data.wishlistSlug}`);
+                          }}
                           className={`text-sm font-semibold text-purple-600 hover:text-purple-800 underline underline-offset-2 mt-1 ${FOCUS_RING}`}
                         >
                           📋 Voir la liste
+                        </button>
+                      )}
+
+                      {/* ⬅️ BOUTON "MES RÉSERVATIONS" pour cadeau_supprime */}
+                      {notif.type === 'cadeau_supprime' && (
+                        <button
+                          onClick={() => {
+                            markAsRead(notif.id);
+                            navigate('/dashboard?view=claims');
+                          }}
+                          className={`mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-all ${FOCUS_RING}`}
+                        >
+                          🎯 Voir mes réservations
                         </button>
                       )}
 

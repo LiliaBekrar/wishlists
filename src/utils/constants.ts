@@ -193,3 +193,41 @@ export const VALIDATION = {
   BUDGET_NAME_MAX_LENGTH: 100,
   DESCRIPTION_MAX_LENGTH: 500,
 }; // ⬅️ Modifiez ici pour ajuster les validations
+
+
+// ============================================================
+// 📤 PARTAGE - Messages pour ShareModal
+// ⚙️ Paramètres à personnaliser
+// ============================================================
+export const SHARE_MESSAGES = {
+  publique: (listName: string, url: string) =>
+    `🎁 ${listName}\n\nViens découvrir ma liste de souhaits ! 🎉\n\n${url}`,
+
+  partagée: (listName: string, url: string) =>
+    `🎁 ${listName}\n\nJe t'invite à rejoindre ma liste de souhaits !\n\nClique sur le lien pour demander l'accès :\n${url}`,
+
+  privée: (listName: string, url: string) =>
+    `🎁 ${listName}\n\nJe te partage ma liste privée 🔒\n\nClique sur le lien pour demander l'accès :\n${url}`,
+
+  profile: (username: string, url: string) =>
+    `👤 Découvre mon profil WishLists !\n\n@${username}\n\n${url}`,
+} as const;
+
+// ============================================================
+// 🗑️ SUPPRESSION COMPTE - Messages de confirmation
+// ⚙️ Paramètres à personnaliser
+// ============================================================
+export const DELETE_ACCOUNT_CONFIG = {
+  CONFIRMATION_TEXT: 'SUPPRIMER',  // ⬅️ Texte à taper pour confirmer
+  WARNING_MESSAGE: `⚠️ ATTENTION : Cette action est irréversible.\n\nToutes tes listes, réservations et données seront supprimées définitivement.\n\nTape "SUPPRIMER" pour confirmer.`,
+} as const;
+
+// ============================================================
+// 📷 AVATAR - Config upload (NOUVEAU)
+// ============================================================
+export const AVATAR_CONFIG = {
+  MAX_SIZE_MB: 2,
+  MAX_SIZE_BYTES: 2 * 1024 * 1024,
+  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  BUCKET_NAME: 'avatars',
+} as const;

@@ -1,13 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // 📄 src/hooks/useItems.ts
-// 🧠 Rôle : Hook pour gérer les items (cadeaux) d'une liste
+// 🧠 Rôle : Hook pour gérer les items avec archivage via fonction PostgreSQL
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { createNotification } from './useNotifications';
 
 export interface Item {
   id: string;
-  wishlist_id: string | null; // ⬅️ Peut être NULL (items orphelins)
+  wishlist_id: string | null;
   title: string;
   note: string | null;
   url: string | null;
@@ -22,7 +23,6 @@ export interface Item {
   model: string | null;
   promo_code: string | null;
   created_at: string;
-  // ⬅️ Colonnes pour items orphelins
   original_wishlist_name?: string | null;
   original_owner_id?: string | null;
 }
@@ -47,6 +47,7 @@ export function useItems(wishlistId: string | undefined) {
         .from('items')
         .select('*')
         .eq('wishlist_id', wishlistId)
+        .not('wishlist_id', 'is', null)
         .order('position', { ascending: true });
 
       if (fetchError) throw fetchError;
@@ -82,7 +83,7 @@ export function useItems(wishlistId: string | undefined) {
         .from('items')
         .insert({
           wishlist_id: wishlistId,
-          title: input.name.trim(), // ⬅️ input.name → column title
+          title: input.name.trim(),
           note: input.description.trim() || null,
           url: input.url.trim() || null,
           image_url: input.image_url.trim() || null,
@@ -119,28 +120,124 @@ export function useItems(wishlistId: string | undefined) {
 
   const deleteItem = async (id: string) => {
     try {
-      // ⬅️ Vérifier si l'item est réservé
-      const { data: claims } = await supabase
-        .from('claims')
-        .select('id')
-        .eq('item_id', id)
-        .eq('status', 'réservé');
+      console.log('🔵 [deleteItem] Début suppression item:', id);
 
-      if (claims && claims.length > 0) {
-        throw new Error('⚠️ Ce cadeau est réservé ! Demande au membre d\'annuler sa réservation avant de le supprimer.');
+      // 1️⃣ Vérifier si l'item est réservé
+      const { data: claims, error: claimsError } = await supabase
+        .from('claims')
+        .select('id, user_id, status')
+        .eq('item_id', id)
+        .eq('status', 'réservé')
+        .maybeSingle();
+
+      if (claimsError) {
+        console.error('❌ [deleteItem] Erreur récupération claims:', claimsError);
+        throw claimsError;
       }
 
-      const { error: deleteError } = await supabase
-        .from('items')
-        .delete()
-        .eq('id', id);
+      console.log('📊 [deleteItem] Claims trouvés:', claims);
 
-      if (deleteError) throw deleteError;
+      // 2️⃣ Si réservé → ARCHIVER + NOTIFIER
+      if (claims) {
+        console.log('📦 [deleteItem] Item réservé → archivage via fonction PostgreSQL');
 
-      console.log('✅ Item supprimé');
+        // ⬅️ FIX : Récupérer item + wishlist séparément
+        // Récupérer l'item
+        const { data: itemData, error: itemError } = await supabase
+          .from('items')
+          .select('title, wishlist_id')
+          .eq('id', id)
+          .single();
+
+        if (itemError) {
+          console.error('❌ [deleteItem] Erreur récupération item:', itemError);
+          throw itemError;
+        }
+
+        if (!itemData.wishlist_id) {
+          throw new Error('Item déjà archivé ou wishlist_id manquant');
+        }
+
+        console.log('📊 [deleteItem] Item récupéré:', itemData);
+
+        // Récupérer la wishlist
+        const { data: wishlistData, error: wishlistError } = await supabase
+          .from('wishlists')
+          .select('name, owner_id')
+          .eq('id', itemData.wishlist_id)
+          .single();
+
+        if (wishlistError) {
+          console.error('❌ [deleteItem] Erreur récupération wishlist:', wishlistError);
+          throw wishlistError;
+        }
+
+        if (!wishlistData) {
+          throw new Error('Wishlist introuvable');
+        }
+
+        console.log('📊 [deleteItem] Wishlist récupérée:', wishlistData);
+
+        // ⭐ APPELER LA FONCTION POSTGRESQL (bypass RLS)
+        console.log('🔧 [deleteItem] Appel fonction archive_reserved_item...');
+
+        const { data: result, error: archiveError } = await supabase.rpc('archive_reserved_item', {
+          p_item_id: id,
+          p_original_wishlist_name: wishlistData.name,
+          p_original_owner_id: wishlistData.owner_id,
+        });
+
+        if (archiveError) {
+          console.error('❌ [deleteItem] Erreur fonction RPC:', {
+            code: archiveError.code,
+            message: archiveError.message,
+            details: archiveError.details,
+            hint: archiveError.hint,
+          });
+          throw archiveError;
+        }
+
+        console.log('✅ [deleteItem] Fonction RPC retournée:', result);
+
+        // Notifier le membre
+        console.log('🔔 [deleteItem] Envoi notification au membre:', claims.user_id);
+
+        await createNotification({
+          userId: claims.user_id,
+          type: 'cadeau_supprime',
+          title: '🗑️ Cadeau retiré de la liste',
+          message: `Le cadeau "${itemData.title}" a été retiré de la liste "${wishlistData.name}" par son propriétaire. Tu peux annuler ta réservation si tu le souhaites.`,
+          data: {
+            itemId: id,
+            itemName: itemData.title,
+            claimId: claims.id,
+            originalWishlistName: wishlistData.name,
+          },
+        });
+
+        console.log('✅ [deleteItem] Item archivé + notification envoyée');
+      }
+      // 3️⃣ Si non réservé → SUPPRIMER
+      else {
+        console.log('🗑️ [deleteItem] Item non réservé → suppression définitive');
+
+        const { error: deleteError } = await supabase
+          .from('items')
+          .delete()
+          .eq('id', id);
+
+        if (deleteError) {
+          console.error('❌ [deleteItem] Erreur suppression:', deleteError);
+          throw deleteError;
+        }
+        console.log('✅ [deleteItem] Item supprimé définitivement');
+      }
+
+      console.log('🔄 [deleteItem] Rafraîchissement de la liste...');
       await fetchItems();
+      console.log('✅ [deleteItem] Suppression terminée avec succès');
     } catch (err) {
-      console.error('❌ Erreur suppression item:', err);
+      console.error('❌ [deleteItem] Erreur suppression/archivage:', err);
       throw err;
     }
   };
