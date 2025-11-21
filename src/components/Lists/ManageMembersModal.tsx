@@ -1,191 +1,179 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// 📄 ManageMembersModal.tsx
-// 🧠 Rôle : Modal pour gérer les membres (inviter, retirer, accepter)
+
+// 📄 src/components/Lists/ManageMembersModal.tsx
 
 import { useState } from 'react';
-import { useMembers } from '../../hooks/useMembers';
+import { supabase } from '../../lib/supabaseClient';
 import { FOCUS_RING } from '../../utils/constants';
-import Toast from '../Toast';
+
+interface Member {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  username: string;
+  email: string | null;
+  role: 'owner' | 'viewer';
+  status: 'actif' | 'en_attente';
+  approved?: boolean | null;
+}
 
 interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   wishlistId: string;
-  isOwner: boolean;
+  members: Member[];
+  onMembersChange?: (members: Member[]) => void;
+  onToast?: (toast: { type: 'success' | 'error'; message: string }) => void;
 }
 
 export default function ManageMembersModal({
   isOpen,
   onClose,
   wishlistId,
-  isOwner,
+  members: initialMembers,
+  onMembersChange,
+  onToast,
 }: ManageMembersModalProps) {
-  const { members, loading, error, removeMember, acceptMember } = useMembers(wishlistId);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  console.log('[ManageMembersModal] render', {
-    isOpen,
-    wishlistId,
-    loading,
-    error,
-    membersCount: members.length,
-    members,
-  });
+  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  // Retirer un membre
-  const handleRemove = async (userId: string, username: string) => {
-    if (!confirm(`Retirer ${username} de cette liste ?`)) return;
-
-    try {
-      console.log('[ManageMembersModal] handleRemove', { userId, username, wishlistId });
-      await removeMember(userId);
-      setToast({ message: `✅ ${username} retiré`, type: 'success' });
-    } catch (error) {
-      console.error('❌ Erreur retrait membre:', error);
-      setToast({ message: '❌ Erreur lors du retrait', type: 'error' });
-    }
+  const syncMembers = (next: Member[]) => {
+    setMembers(next);
+    onMembersChange?.(next);
   };
 
-  // Accepter une demande
-  const handleAccept = async (userId: string, username: string) => {
+  // 🆕 APPROUVER : approved = true + status = 'actif'
+  const handleApproveMember = async (memberId: string) => {
+    if (!wishlistId) return;
+
+    setLoadingMemberId(memberId);
+
     try {
-      console.log('[ManageMembersModal] handleAccept', { userId, username, wishlistId });
-      await acceptMember(userId);
-      setToast({ message: `✅ ${username} accepté`, type: 'success' });
-    } catch (error) {
-      console.error('❌ Erreur acceptation:', error);
-      setToast({ message: '❌ Erreur', type: 'error' });
+      const { error } = await supabase
+        .from('wishlist_members')
+        .update({
+          approved: true,     // ✅ pour la policy RLS
+          status: 'actif',    // ✅ cohérent avec le reste de l’app
+        })
+        .eq('id', memberId);
+
+      if (error) {
+        console.error('❌ [ManageMembersModal] Erreur approveMember:', error);
+        onToast?.({
+          type: 'error',
+          message: "Impossible d'approuver ce membre.",
+        });
+        return;
+      }
+
+      // ✅ On force bien le retour comme Member
+      const next: Member[] = members.map((m): Member =>
+        m.id === memberId
+          ? {
+              ...m,
+              approved: true,
+              status: 'actif', // typé correctement comme Member['status']
+            }
+          : m
+      );
+      syncMembers(next);
+
+      onToast?.({
+        type: 'success',
+        message: '✅ Membre approuvé !',
+      });
+    } catch (err) {
+      console.error('❌ [ManageMembersModal] Exception approveMember:', err);
+      onToast?.({
+        type: 'error',
+        message: "Erreur lors de l'approbation.",
+      });
+    } finally {
+      setLoadingMemberId(null);
     }
   };
 
   return (
-    <>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-900">
+            👥 Gestion des membres
+          </h2>
+          <button
+            onClick={onClose}
+            className={`w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 ${FOCUS_RING}`}
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+        </div>
 
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">👥 Gérer les membres</h2>
-            <button
-              onClick={onClose}
-              className={`p-2 hover:bg-gray-100 rounded-lg transition-all ${FOCUS_RING}`}
-              aria-label="Fermer"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+        <div className="p-6 space-y-4">
+          {members.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Aucun membre pour le moment.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {members.map((member) => (
+                <li
+                  key={member.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {member.display_name || member.username}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      @{member.username}
+                      {member.email ? ` · ${member.email}` : ''}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Rôle : {member.role === 'owner' ? 'Propriétaire' : 'Invité'}
+                      {' · '}
+                      Statut :{' '}
+                      {member.status === 'actif'
+                        ? '✅ Actif'
+                        : '⏳ En attente'}
+                    </p>
+                  </div>
 
-          {/* Body */}
-          <div className="p-6 space-y-6">
-            {error && (
-              <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
-                Erreur de chargement des membres : {error}
-              </div>
-            )}
-
-            {/* Liste des membres */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                Membres actuels ({members.length})
-              </h3>
-
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4" />
-                  <p className="text-gray-500">Chargement...</p>
-                </div>
-              ) : members.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  Aucun membre pour le moment
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {members.map((member) => {
-                    const displayName =
-                      member.profiles?.display_name ||
-                      member.profiles?.username ||
-                      'Utilisateur';
-                    const userUsername = member.profiles?.username ;
-                    const isPending = member.status === 'en_attente';
-
-                    return (
-                      <div
-                        key={`${member.user_id}-${member.wishlist_id}`}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
+                  <div className="flex items-center gap-2">
+                    {member.status === 'en_attente' && (
+                      <button
+                        type="button"
+                        disabled={loadingMemberId === member.id}
+                        onClick={() => handleApproveMember(member.id)}
+                        className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 ${FOCUS_RING}`}
                       >
-                        <div className="flex items-center gap-3">
-                          {/* Avatar */}
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold">
-                            {displayName[0].toUpperCase()}
-                          </div>
+                        {loadingMemberId === member.id ? '...' : '✅ Approuver'}
+                      </button>
+                    )}
 
-                          {/* Infos */}
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {displayName} {userUsername && <span className="text-gray-500">(@{userUsername})</span>}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {member.role === 'owner' && '👑 Propriétaire'}
-                              {member.role === 'viewer' && isPending && '⏳ En attente'}
-                              {member.role === 'viewer' && !isPending && '👀 Membre'}
-                            </p>
-                          </div>
-                        </div>
+                    {/* Bouton supprimer éventuel ici */}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-                        {/* Actions (owner only) */}
-                        {isOwner && member.role !== 'owner' && (
-                          <div className="flex gap-2">
-                            {isPending && (
-                              <button
-                                onClick={() => handleAccept(member.user_id, displayName)}
-                                className={`px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-                              >
-                                ✅ Accepter
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRemove(member.user_id, displayName)}
-                              className={`px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-                            >
-                              ❌ Retirer
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
-            <button
-              onClick={onClose}
-              className={`px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg ${FOCUS_RING}`}
-            >
-              Fermer
-            </button>
-          </div>
+        <div className="px-6 py-4 border-t flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 ${FOCUS_RING}`}
+          >
+            Fermer
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

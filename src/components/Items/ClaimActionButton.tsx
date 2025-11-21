@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Items/ClaimActionButton.tsx
 // 🧠 Rôle : Bouton réserver/annuler avec nettoyage auto des items archivés
@@ -92,7 +92,10 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
     }
 
     if (!canClaim) {
-      showToast({ message: 'Tu dois rejoindre la liste pour réserver ce cadeau', type: 'error' });
+      showToast({
+        message: 'Tu dois rejoindre la liste pour réserver ce cadeau',
+        type: 'error',
+      });
       return;
     }
 
@@ -113,8 +116,12 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
         console.log('✅ [handleReserve] Wishlist trouvée:', wishlist);
       }
 
-      // 2️⃣ Insérer le claim
-      console.log('🔵 [handleReserve] Insertion claim...');
+      // 2️⃣ Insertion claim
+      console.log('🔵 [handleReserve] Insertion claim...', {
+        item_id: item.id,
+        user_id: user.id,
+      });
+
       const { error: claimError } = await supabase
         .from('claims')
         .insert({
@@ -123,13 +130,21 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
           status: 'réservé',
         });
 
+      // 🔥🔥🔥 NOUVEAU : LOG DÉTAILLÉ EN CAS D'ERREUR
       if (claimError) {
-        console.error('❌ [handleReserve] Erreur INSERT claim:', claimError);
+        console.error('❌ [handleReserve] Erreur INSERT claim:', {
+          code: (claimError as any).code,
+          message: claimError.message,
+          details: claimError.details,
+          hint: claimError.hint,
+          name: (claimError as any).name,
+        });
 
         const pgCode = (claimError as any).code;
         const message = (claimError as any).message as string | undefined;
 
-        if (pgCode === '23505' || (message && message.toLowerCase().includes('duplicate key'))) {
+        // ⚠️ Cas doublon = reservé par quelqu'un d'autre
+        if (pgCode === '23505' || (message && message.toLowerCase().includes('duplicate'))) {
           showToast({
             message: 'Ce cadeau a déjà été réservé par quelqu\'un d\'autre.',
             type: 'error',
@@ -138,19 +153,22 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
           return;
         }
 
+        // ⚠️ RLS ou autre
         showToast({
-          message: message || 'Erreur lors de la réservation',
+          message:
+            message ||
+            'Impossible de réserver ce cadeau (vérifie que tu es bien membre de la liste).',
           type: 'error',
         });
+
         return;
       }
 
-      console.log('✅ [handleReserve] Claim inséré');
+      console.log('✅ [handleReserve] Claim inséré avec succès !');
 
-      // 3️⃣ Notifier tous les membres (sauf owner et sauf moi)
+      // 3️⃣ Notifications
       if (wishlist) {
         console.log('🔔 [handleReserve] Appel notifyAllMembers...');
-
         await notifyAllMembers({
           wishlistId,
           type: 'reservation_cadeau',
@@ -163,16 +181,14 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
           },
           excludeUserIds: [user.id],
         });
-
         console.log('✅ [handleReserve] notifyAllMembers terminé');
-      } else {
-        console.warn('⚠️ [handleReserve] Pas de wishlist, notifications non envoyées');
       }
 
       showToast({ message: '🎁 Cadeau réservé avec succès !', type: 'success' });
       onAction?.();
     } catch (error: any) {
-      console.error('❌ [handleReserve] Exception:', error);
+      console.error('❌ [handleReserve] Exception JS:', error);
+
       showToast({
         message: error?.message || 'Erreur lors de la réservation',
         type: 'error',
@@ -181,6 +197,7 @@ export default function ClaimActionButton(props: ClaimActionButtonProps) {
       setLoading(false);
     }
   };
+
 
   const handleCancel = async () => {
     console.log('🔵 [handleCancel] Début', {
