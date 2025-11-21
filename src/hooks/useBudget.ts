@@ -1,140 +1,213 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// 📄 src/hooks/useBudget.ts (VERSION FINALE CORRIGÉE)
-// 🧠 Rôle : Hook pour gérer les budgets (auto calculés dynamiquement + manuels en BDD)
+// 📄 src/hooks/useBudget.ts
+// 🧠 Rôle : Budgets automatiques (calculés à la volée)
+// 🇫🇷 100% français + shipping_cost inclus
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { BudgetGoal, BudgetData } from '../types/db';
-import {
-  enrichBudgetData,
-  calculateAnnualSpent,
-  calculateThemeSpent,
-  countAnnualItems,
-  countThemeItems
-} from '../utils/budgetCalculations';
+import type { BudgetGoal, BudgetData, ThemeType } from '../types/db';
 
 /**
- * Hook principal pour récupérer tous les budgets d'un utilisateur
- * NOUVEAUTÉ : Les budgets auto sont calculés dynamiquement (pas en BDD)
+ * ✅ Helper : Calculer progress, threshold
  */
-export function useBudget(userId: string) {
+function enrichBudgetData(
+  budgetGoal: BudgetGoal,
+  spent: number,
+  itemsCount: number
+): BudgetData {
+  const limit = budgetGoal.limit_amount || 0;
+
+  let progress = 0;
+  let threshold: 'green' | 'orange' | 'red' = 'green';
+
+  if (limit > 0) {
+    progress = Math.round((spent / limit) * 100);
+
+    if (progress < 90) {
+      threshold = 'green';
+    } else if (progress < 100) {
+      threshold = 'orange';
+    } else {
+      threshold = 'red';
+    }
+  }
+
+  return {
+    budgetGoal,
+    spent,
+    progress,
+    threshold,
+    itemsCount
+  };
+}
+
+/**
+ * Hook principal : génère budgets automatiques
+ */
+export function useBudget(userId: string, year: number = new Date().getFullYear()) {
   const [budgets, setBudgets] = useState<BudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = async () => {
-    if (!userId) return;
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-    try {
-      setLoading(true);
-      setError(null);
+    async function fetchBudgets() {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const currentYear = new Date().getFullYear();
-
-      // 1️⃣ Récupérer les claims (in-app) - ✅ Ajouter original_theme
-      const { data: claims, error: claimsError } = await supabase
-        .from('claims')
-        .select(`
-          *,
-          items!inner(
-            price,
-            original_theme,
-            wishlists(
-              theme,
-              profiles!wishlists_owner_id_fkey!inner(display_name)
+        // ✅ 1. Récupérer claims (items in-app)
+        const { data: claimsRaw, error: claimsError } = await supabase
+          .from('claims')
+          .select(`
+            id,
+            status,
+            created_at,
+            reserved_at,
+            items!inner (
+              id,
+              title,
+              price,
+              shipping_cost,
+              original_theme,
+              wishlists (
+                id,
+                name,
+                theme,
+                owner_id,
+                profiles!wishlists_owner_id_fkey (
+                  id,
+                  display_name
+                )
+              )
             )
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('status', 'réservé');
+          `)
+          .eq('user_id', userId)
+          .eq('status', 'réservé');
 
-      if (claimsError) throw claimsError;
+        if (claimsError) throw claimsError;
 
-      // 2️⃣ Récupérer les external_gifts (hors-app)
-      const { data: externalGifts, error: giftsError } = await supabase
-        .from('external_gifts')
-        .select('*')
-        .eq('user_id', userId);
+        const claims = claimsRaw as any[];
 
-      if (giftsError) throw giftsError;
+        // ✅ 2. Récupérer external_gifts
+        const { data: externalGifts, error: giftsError } = await supabase
+          .from('external_gifts')
+          .select('*')
+          .eq('user_id', userId);
 
-      // 3️⃣ CRÉER LES BUDGETS AUTO DYNAMIQUEMENT (pas en BDD)
-      const autoBudgetTypes: Array<{
-        type: 'annuel' | 'noël' | 'anniversaire' | 'naissance' | 'mariage' | 'autre';
-        year: number;
-        name: string;
-      }> = [
-        { type: 'annuel', year: currentYear, name: `Annuel ${currentYear}` },
-        { type: 'noël', year: currentYear - 1, name: `Noël ${currentYear - 1}` },
-        { type: 'noël', year: currentYear, name: `Noël ${currentYear}` },
-        { type: 'anniversaire', year: currentYear, name: `Anniversaire ${currentYear}` },
-        { type: 'naissance', year: currentYear, name: `Naissance ${currentYear}` },
-        { type: 'mariage', year: currentYear, name: `Mariage ${currentYear}` },
-        { type: 'autre', year: currentYear, name: `Autre ${currentYear}` }
-      ];
+        if (giftsError) throw giftsError;
 
-      const autoBudgets: BudgetData[] = autoBudgetTypes.map(({ type, year, name }) => {
-        let spent = 0;
-        let itemsCount = 0;
+        // ✅ 3. Filtrer par année + calculer total_price
+        const yearClaims = (claims || [])
+          .filter(claim => {
+            const claimYear = new Date(claim.created_at).getFullYear();
+            return claimYear === year;
+          })
+          .map(claim => {
+            const item = claim.items;
+            const wishlist = item?.wishlists;
+            const price = item?.price || 0;
+            const shipping = item?.shipping_cost || 0;
 
-        if (type === 'annuel') {
-          spent = calculateAnnualSpent(claims || [], externalGifts || [], year);
-          itemsCount = countAnnualItems(claims || [], externalGifts || [], year);
-        } else {
-          spent = calculateThemeSpent(claims || [], externalGifts || [], type, year);
-          itemsCount = countThemeItems(claims || [], externalGifts || [], type, year);
-        }
+            return {
+              id: claim.id,
+              title: item?.title || 'Sans titre',
+              total_price: price + shipping,
+              theme: wishlist?.theme || item?.original_theme || null,
+              recipient_name: wishlist?.profiles?.display_name || 'Inconnu',
+              claim_date: claim.created_at
+            };
+          });
 
-        const virtualGoal: BudgetGoal = {
-          id: `auto-${type}-${year}`,
-          user_id: userId,
-          name,
-          type,
-          year,
+        const yearExternal = (externalGifts || [])
+          .filter(gift => {
+            const giftYear = new Date(gift.purchase_date).getFullYear();
+            return giftYear === year;
+          })
+          .map(gift => ({
+            id: gift.id,
+            title: gift.description || 'Cadeau hors app',
+            total_price: gift.paid_amount || 0,
+            theme: gift.theme || null,
+            recipient_name: gift.recipient_name || 'Inconnu',
+            claim_date: gift.purchase_date
+          }));
+
+        // ✅ 4. Calculer budget annuel global
+        const totalSpent =
+          yearClaims.reduce((sum, c) => sum + c.total_price, 0) +
+          yearExternal.reduce((sum, g) => sum + g.total_price, 0);
+
+        const totalItems = yearClaims.length + yearExternal.length;
+
+        const annualGoal: BudgetGoal = {
+          id: `auto-annuel-${year}`,
+          name: `Budget ${year}`,
+          type: 'annuel',
+          year: year,
           limit_amount: null,
+          user_id: userId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
 
-        return enrichBudgetData(virtualGoal, spent, itemsCount);
-      }).filter(b => b.itemsCount > 0);
+        const budgetsData: BudgetData[] = [
+          enrichBudgetData(annualGoal, totalSpent, totalItems)
+        ];
 
-      // 4️⃣ Récupérer les budgets personnalisés (en BDD)
-      const { data: customBudgets, error: customError } = await supabase
-        .from('budget_goals')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('type', 'personnalisé');
+        // ✅ 5. Générer budgets par thème
+        const themesUsed = new Set<ThemeType>();
+        yearClaims.forEach(c => { if (c.theme) themesUsed.add(c.theme as ThemeType); });
+        yearExternal.forEach(g => { if (g.theme) themesUsed.add(g.theme as ThemeType); });
 
-      if (customError) throw customError;
+        themesUsed.forEach(theme => {
+          const themeClaims = yearClaims.filter(c => c.theme === theme);
+          const themeExternal = yearExternal.filter(g => g.theme === theme);
 
-      const customBudgetsData: BudgetData[] = customBudgets?.map(goal =>
-        enrichBudgetData(goal, 0, 0)
-      ) || [];
+          const themeSpent =
+            themeClaims.reduce((sum, c) => sum + c.total_price, 0) +
+            themeExternal.reduce((sum, g) => sum + g.total_price, 0);
 
-      // 5️⃣ Fusionner auto + custom
-      const allBudgets = [...autoBudgets, ...customBudgetsData];
+          const themeItems = themeClaims.length + themeExternal.length;
 
-      setBudgets(allBudgets);
-    } catch (err: any) {
-      console.error('Erreur useBudget:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+          const themeGoal: BudgetGoal = {
+            id: `auto-${theme}-${year}`,
+            name: theme,
+            type: theme,
+            year: year,
+            limit_amount: null,
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          budgetsData.push(enrichBudgetData(themeGoal, themeSpent, themeItems));
+        });
+
+        // ✅ Filtrer les budgets vides
+        setBudgets(budgetsData.filter(b => b.itemsCount > 0));
+
+      } catch (err: any) {
+        console.error('❌ Erreur useBudget:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
 
-  useEffect(() => {
-    refetch();
-  }, [userId]);
+    fetchBudgets();
+  }, [userId, year]);
 
-  return { budgets, loading, error, refetch };
+  return { budgets, loading, error };
 }
 
 /**
- * Hook pour données du donut (par personne/thème/liste)
- * ✅ MODIFIÉ : Ajoute original_theme dans la requête
+ * Hook pour données donut (par personne/thème/liste)
  */
 export function useBudgetDonutData(
   userId: string,
@@ -151,214 +224,160 @@ export function useBudgetDonutData(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     async function fetchData() {
       try {
         setLoading(true);
 
-        // Récupérer claims avec détails + original_theme
-        const { data: claims, error: claimsError } = await supabase
+        // ✅ Claims
+        const { data: claimsRaw, error: claimsError } = await supabase
           .from('claims')
           .select(`
             id,
-            reserved_at,
+            status,
             created_at,
-            paid_amount,
-            items!inner(
+            items!inner (
+              id,
               title,
               price,
+              shipping_cost,
               original_theme,
-              wishlists(
-                owner_id,
-                theme,
+              original_owner_id,
+              wishlists (
+                id,
                 name,
-                profiles!wishlists_owner_id_fkey!inner(display_name)
+                theme,
+                owner_id,
+                profiles!wishlists_owner_id_fkey (
+                  id,
+                  display_name
+                )
               )
             )
           `)
           .eq('user_id', userId)
           .eq('status', 'réservé');
 
-        if (claimsError) {
-          console.error('❌ Erreur claims:', claimsError);
-        }
+        if (claimsError) throw claimsError;
 
-        // Récupérer external_gifts avec détails
+        const claims = (claimsRaw as any[])?.filter(claim => {
+          const claimYear = new Date(claim.created_at).getFullYear();
+          return claimYear === year;
+        }) || [];
+
+        // ✅ External gifts
         const { data: externalGifts, error: giftsError } = await supabase
           .from('external_gifts')
-          .select(`
-            id,
-            purchase_date,
-            paid_amount,
-            description,
-            theme,
-            external_recipients!inner(
-              name,
-              profile_id,
-              profiles!external_recipients_profile_id_fkey(display_name)
-            )
-          `)
+          .select('*')
           .eq('user_id', userId);
 
-        if (giftsError) {
-          console.error('❌ Erreur external_gifts:', giftsError);
-        }
+        if (giftsError) throw giftsError;
 
-        console.log('🔍 Claims récupérés:', claims?.length, claims);
-        console.log('🔍 External gifts récupérés:', externalGifts?.length, externalGifts);
+        const filteredExternal = (externalGifts || []).filter(gift => {
+          const giftYear = new Date(gift.purchase_date).getFullYear();
+          return giftYear === year;
+        });
 
-        // Grouper selon viewMode
+        // ✅ Agréger selon viewMode
         const grouped = new Map<string, number>();
         const itemsByCategory = new Map<string, Array<{ title: string; price: number }>>();
 
-        if (viewMode === 'global' || viewMode === 'theme') {
-          // Vue globale/thème - ✅ Utiliser original_theme en fallback
-          claims?.forEach((claim: any) => {
-            const claimDate = claim.reserved_at || claim.created_at;
-            if (!claimDate) return;
-            const claimYear = new Date(claimDate).getFullYear();
-            if (claimYear !== year) return;
+        // Helper : récupérer nom du propriétaire
+        const getOwnerName = async (claim: any): Promise<string> => {
+          if (claim.items?.wishlists?.profiles?.display_name) {
+            return claim.items.wishlists.profiles.display_name;
+          }
+          if (claim.items?.original_owner_id) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('display_name')
+              .eq('id', claim.items.original_owner_id)
+              .single();
+            if (data?.display_name) return data.display_name;
+          }
+          return 'Inconnu';
+        };
 
-            const theme = claim.items?.wishlists?.theme || claim.items?.original_theme || 'autre';
-            const amount = claim.paid_amount || claim.items?.price || 0;
-            const title = claim.items?.title || 'Cadeau sans titre';
+        // Process claims
+        for (const claim of claims) {
+          const item = claim.items;
+          const wishlist = item?.wishlists;
+          const totalPrice = (item?.price || 0) + (item?.shipping_cost || 0);
 
-            grouped.set(theme, (grouped.get(theme) || 0) + amount);
+          let key = '';
+          if (viewMode === 'theme' || viewMode === 'global') {
+            key = wishlist?.theme || item?.original_theme || 'autre';
+          } else if (viewMode === 'person') {
+            key = await getOwnerName(claim);
+          } else if (viewMode === 'list') {
+            key = wishlist?.name || 'Hors liste';
+          }
 
-            if (!itemsByCategory.has(theme)) {
-              itemsByCategory.set(theme, []);
-            }
-            itemsByCategory.get(theme)?.push({ title, price: amount });
+          grouped.set(key, (grouped.get(key) || 0) + totalPrice);
 
-            console.log(`✅ Ajouté à ${theme}:`, title, amount);
-          });
-
-          externalGifts?.forEach((gift: any) => {
-            const giftYear = new Date(gift.purchase_date).getFullYear();
-            if (giftYear !== year) return;
-
-            const theme = gift.theme || 'autre';
-            const title = gift.description || 'Cadeau hors-app';
-            const amount = gift.paid_amount;
-
-            grouped.set(theme, (grouped.get(theme) || 0) + amount);
-
-            if (!itemsByCategory.has(theme)) {
-              itemsByCategory.set(theme, []);
-            }
-            itemsByCategory.get(theme)?.push({ title, price: amount });
-
-            console.log(`✅ Ajouté external à ${theme}:`, title, amount);
-          });
-
-        } else if (viewMode === 'person') {
-          // Vue par personne
-          claims?.forEach((claim: any) => {
-            const claimDate = claim.reserved_at || claim.created_at;
-            if (!claimDate) return;
-            const claimYear = new Date(claimDate).getFullYear();
-            if (claimYear !== year) return;
-
-            const personName = claim.items?.wishlists?.profiles?.display_name || 'Inconnu';
-            const amount = claim.paid_amount || claim.items?.price || 0;
-            const title = claim.items?.title || 'Cadeau sans titre';
-
-            grouped.set(personName, (grouped.get(personName) || 0) + amount);
-
-            if (!itemsByCategory.has(personName)) {
-              itemsByCategory.set(personName, []);
-            }
-            itemsByCategory.get(personName)?.push({ title, price: amount });
-          });
-
-          externalGifts?.forEach((gift: any) => {
-            const giftYear = new Date(gift.purchase_date).getFullYear();
-            if (giftYear !== year) return;
-
-            const personName = gift.external_recipients?.profiles?.display_name
-              || gift.external_recipients?.name
-              || 'Inconnu';
-            const title = gift.description || 'Cadeau hors-app';
-            const amount = gift.paid_amount;
-
-            grouped.set(personName, (grouped.get(personName) || 0) + amount);
-
-            if (!itemsByCategory.has(personName)) {
-              itemsByCategory.set(personName, []);
-            }
-            itemsByCategory.get(personName)?.push({ title, price: amount });
-          });
-
-        } else if (viewMode === 'list') {
-          // Vue par liste
-          claims?.forEach((claim: any) => {
-            const claimDate = claim.reserved_at || claim.created_at;
-            if (!claimDate) return;
-            const claimYear = new Date(claimDate).getFullYear();
-            if (claimYear !== year) return;
-
-            const listName = claim.items?.wishlists?.name || 'Hors liste';
-            const amount = claim.paid_amount || claim.items?.price || 0;
-            const title = claim.items?.title || 'Cadeau sans titre';
-
-            grouped.set(listName, (grouped.get(listName) || 0) + amount);
-
-            if (!itemsByCategory.has(listName)) {
-              itemsByCategory.set(listName, []);
-            }
-            itemsByCategory.get(listName)?.push({ title, price: amount });
-          });
-
-          // External gifts → Hors liste
-          externalGifts?.forEach((gift: any) => {
-            const giftYear = new Date(gift.purchase_date).getFullYear();
-            if (giftYear !== year) return;
-
-            const title = gift.description || 'Cadeau hors-app';
-            const amount = gift.paid_amount;
-
-            grouped.set('Hors liste', (grouped.get('Hors liste') || 0) + amount);
-
-            if (!itemsByCategory.has('Hors liste')) {
-              itemsByCategory.set('Hors liste', []);
-            }
-            itemsByCategory.get('Hors liste')?.push({ title, price: amount });
+          if (!itemsByCategory.has(key)) {
+            itemsByCategory.set(key, []);
+          }
+          itemsByCategory.get(key)?.push({
+            title: item?.title || 'Sans titre',
+            price: totalPrice
           });
         }
 
-        console.log('🔍 itemsByCategory:', Array.from(itemsByCategory.entries()));
+        // Process external gifts
+        filteredExternal.forEach(gift => {
+          const totalPrice = gift.paid_amount || 0;
 
+          let key = '';
+          if (viewMode === 'theme' || viewMode === 'global') {
+            key = gift.theme || 'autre';
+          } else if (viewMode === 'person') {
+            key = gift.recipient_name || 'Inconnu';
+          } else if (viewMode === 'list') {
+            key = 'Cadeaux hors app';
+          }
+
+          grouped.set(key, (grouped.get(key) || 0) + totalPrice);
+
+          if (!itemsByCategory.has(key)) {
+            itemsByCategory.set(key, []);
+          }
+          itemsByCategory.get(key)?.push({
+            title: gift.description || 'Cadeau hors app',
+            price: totalPrice
+          });
+        });
+
+        // ✅ Convertir en format donut
         const total = Array.from(grouped.values()).reduce((sum, val) => sum + val, 0);
 
         if (total === 0) {
           setData([]);
+          setLoading(false);
           return;
         }
 
-        const DONUT_COLORS = [
-          '#8B5CF6', '#EC4899', '#3B82F6', '#A855F7',
-          '#F472B6', '#60A5FA', '#7C3AED', '#DB2777',
-          '#2563EB', '#C084FC',
+        const COLORS = [
+          '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
+          '#f59e0b', '#ef4444', '#a855f7', '#db2777'
         ];
 
         const result = Array.from(grouped.entries())
-          .map(([name, value], index) => {
-            const items = itemsByCategory.get(name) || [];
-            console.log(`🔍 Items pour ${name}:`, items);
-
-            return {
-              name,
-              value: Math.round(value * 100) / 100,
-              percentage: Math.round((value / total) * 100),
-              color: DONUT_COLORS[index % DONUT_COLORS.length],
-              items
-            };
-          })
+          .map(([name, value], index) => ({
+            name,
+            value: Math.round(value * 100) / 100,
+            percentage: Math.round((value / total) * 100),
+            color: COLORS[index % COLORS.length],
+            items: itemsByCategory.get(name) || []
+          }))
           .sort((a, b) => b.value - a.value);
 
-        console.log('✅ Résultat final:', result);
         setData(result);
+
       } catch (err) {
         console.error('❌ Erreur useBudgetDonutData:', err);
       } finally {

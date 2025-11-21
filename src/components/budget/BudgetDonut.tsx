@@ -1,13 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 src/components/budget/BudgetDonut.tsx
-// 🧠 Rôle : Donut chart interactif avec tooltip toggle (click)
+// 🧠 Rôle : Donut chart interactif (SELECT mobile + tabs desktop)
+// 🇫🇷 100% français, traductions inline
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import type { BudgetViewMode } from '../../types/db';
 import { formatPrice } from '../../utils/format';
-import { THEME_LABELS, FOCUS_RING } from '../../utils/constants';
+import { FOCUS_RING } from '../../utils/constants';
 
 // ✅ Type compatible Recharts
 interface DonutDataItem {
@@ -26,8 +28,8 @@ interface BudgetDonutProps {
   totalSpent: number;
 }
 
-// ✅ Labels normaux (toujours visibles)
-const renderCustomizedLabel = (props: any) => {
+// ✅ Labels desktop (autour du donut)
+const renderDesktopLabel = (props: any) => {
   const { cx, cy, midAngle, outerRadius, name, percentage, value, fill } = props;
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 50;
@@ -76,6 +78,32 @@ const renderCustomizedLabel = (props: any) => {
   );
 };
 
+// ✅ Labels mobile (% seulement si >5%)
+const renderMobileLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percentage } = props;
+
+  if (percentage < 5) return null;
+
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize="14"
+      fontWeight="700"
+    >
+      {percentage}%
+    </text>
+  );
+};
+
 export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: BudgetDonutProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
@@ -88,7 +116,6 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
     { value: 'list', label: 'Par liste', icon: '📋' }
   ];
 
-  // ✅ Ouvrir/fermer le tooltip
   const toggleTooltip = (item: DonutDataItem) => {
     if (tooltipOpen && tooltipItem?.name === item.name) {
       setTooltipOpen(false);
@@ -99,15 +126,14 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
     }
   };
 
-  // ✅ Tooltip détaillé (modal style)
+  // ✅ Tooltip modal détaillé
   const DetailedTooltip = () => {
     if (!tooltipOpen || !tooltipItem) return null;
 
     return (
       <>
-        {/* Backdrop pour fermer */}
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fade-in"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
           onClick={() => {
             setTooltipOpen(false);
             setTooltipItem(null);
@@ -115,22 +141,20 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
           }}
         />
 
-        {/* Tooltip modal */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl border-2 border-purple-300 max-w-md w-full max-h-[80vh] overflow-hidden animate-scale-in">
-            {/* Header */}
+          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl border-2 border-purple-300 max-w-md w-full max-h-[80vh] overflow-hidden">
             <div
               className="p-4 border-b-2 border-gray-200"
               style={{ backgroundColor: `${tooltipItem.color}15` }}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
-                    className="w-6 h-6 rounded-full ring-4 ring-white shadow-lg"
+                    className="w-6 h-6 rounded-full ring-4 ring-white shadow-lg flex-shrink-0"
                     style={{ backgroundColor: tooltipItem.color }}
                   />
-                  <div>
-                    <p className="font-bold text-gray-900 text-lg">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-gray-900 text-lg truncate">
                       {tooltipItem.name}
                     </p>
                     <p className="text-sm text-gray-600">
@@ -144,7 +168,7 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                     setTooltipItem(null);
                     setHoveredIndex(null);
                   }}
-                  className={`w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-all ${FOCUS_RING}`}
+                  className={`w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-all flex-shrink-0 ${FOCUS_RING}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -153,7 +177,6 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
               </div>
             </div>
 
-            {/* Liste des cadeaux (scrollable) */}
             <div className="p-4 overflow-y-auto max-h-[calc(80vh-180px)]">
               {tooltipItem.items && tooltipItem.items.length > 0 ? (
                 <div className="space-y-3">
@@ -163,10 +186,10 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                       className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-medium leading-tight">{gift.title}</p>
+                        <p className="text-gray-900 font-medium leading-tight break-words">{gift.title}</p>
                       </div>
                       <span
-                        className="font-bold text-lg whitespace-nowrap"
+                        className="font-bold text-lg whitespace-nowrap flex-shrink-0"
                         style={{ color: tooltipItem.color }}
                       >
                         {formatPrice(gift.price)}
@@ -181,7 +204,6 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
               )}
             </div>
 
-            {/* Footer avec total */}
             <div
               className="p-4 border-t-2 border-gray-200"
               style={{ backgroundColor: `${tooltipItem.color}10` }}
@@ -210,7 +232,7 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
     const csvContent = [
       ['Nom', 'Montant', 'Pourcentage'],
       ...data.map(item => [
-        viewMode === 'theme' && THEME_LABELS[item.name] ? THEME_LABELS[item.name] : item.name,
+        item.name,
         item.value.toFixed(2),
         item.percentage
       ])
@@ -225,42 +247,80 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-purple-200/50 overflow-hidden">
-      {/* Tabs */}
+      {/* Header : Select mobile / Tabs desktop */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-lg border-b border-gray-200">
-        <div className="flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-hide px-6 py-5">
+
+        {/* Mobile : Select */}
+        <div className="md:hidden px-4 py-4">
+          <div className="relative">
+            <select
+              value={viewMode}
+              onChange={(e) => onViewModeChange(e.target.value as BudgetViewMode)}
+              className={`
+                w-full appearance-none
+                px-5 py-4 pr-12
+                bg-gradient-to-r from-purple-600 to-blue-600
+                text-white font-bold text-base
+                rounded-xl border-2 border-purple-700
+                shadow-lg cursor-pointer
+                ${FOCUS_RING}
+              `}
+            >
+              {tabs.map(tab => (
+                <option
+                  key={tab.value}
+                  value={tab.value}
+                  className="bg-white text-gray-900 font-semibold"
+                >
+                  {tab.icon} {tab.label}
+                </option>
+              ))}
+            </select>
+
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop : Tabs */}
+        <div className="hidden md:flex justify-center items-center gap-4 px-6 py-5">
           {tabs.map(tab => (
             <button
               key={tab.value}
               onClick={() => onViewModeChange(tab.value)}
               className={`
-                group flex items-center gap-3 px-6 py-3.5 rounded-xl font-semibold whitespace-nowrap transition-all duration-300
+                group flex items-center gap-3
+                px-6 py-3.5 rounded-xl font-semibold
+                transition-all duration-300
                 ${FOCUS_RING}
                 ${viewMode === tab.value
-                  ? 'bg-purple-600 text-white shadow-lg scale-105'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-102'
                 }
               `}
             >
               <span className="text-xl">{tab.icon}</span>
-              <span className="text-sm sm:text-base">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="p-6 sm:p-8">
-        {/* Total dépensé */}
-        <div className="text-center mb-8 p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl border-2 border-purple-200/50">
-          <p className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total dépensé</p>
-          <p className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Total */}
+        <div className="text-center mb-6 sm:mb-8 p-4 sm:p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl border-2 border-purple-200/50">
+          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1 sm:mb-2 uppercase tracking-wide">Total dépensé</p>
+          <p className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
             {formatPrice(totalSpent)}
           </p>
         </div>
 
-        {/* Donut Chart */}
         {data.length > 0 ? (
           <>
-            {/* Desktop : Labels autour */}
+            {/* Desktop : Donut avec labels externes */}
             <div className="hidden lg:block relative">
               <ResponsiveContainer width="100%" height={500}>
                 <PieChart>
@@ -280,7 +340,7 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                       setHoveredIndex(index);
                       toggleTooltip(data[index]);
                     }}
-                    label={renderCustomizedLabel}
+                    label={renderDesktopLabel}
                     labelLine={false}
                   >
                     {data.map((entry, index) => (
@@ -303,17 +363,17 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
               </ResponsiveContainer>
             </div>
 
-            {/* Mobile/Tablet : Donut avec labels */}
+            {/* Mobile : Donut avec % intégrés */}
             <div className="lg:hidden relative">
-              <ResponsiveContainer width="100%" height={450}>
+              <ResponsiveContainer width="100%" height={380} minHeight={350}>
                 <PieChart>
                   <Pie
                     data={data as any[]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={0}
+                    innerRadius="55%"
+                    outerRadius="85%"
+                    paddingAngle={1}
                     dataKey="value"
                     startAngle={90}
                     endAngle={450}
@@ -321,7 +381,7 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                       setHoveredIndex(index);
                       toggleTooltip(data[index]);
                     }}
-                    label={renderCustomizedLabel}
+                    label={renderMobileLabel}
                     labelLine={false}
                   >
                     {data.map((entry, index) => (
@@ -329,8 +389,13 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                         key={`cell-${index}`}
                         fill={entry.color}
                         stroke="white"
-                        strokeWidth={2}
-                        className="transition-all cursor-pointer"
+                        strokeWidth={3}
+                        className="transition-all cursor-pointer active:scale-95"
+                        style={{
+                          filter: hoveredIndex === index
+                            ? `drop-shadow(0 0 8px ${entry.color})`
+                            : 'none'
+                        }}
                       />
                     ))}
                   </Pie>
@@ -338,13 +403,9 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
               </ResponsiveContainer>
             </div>
 
-            {/* ✅ Légende interactive avec cartes */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Légende interactive */}
+            <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {data.map((item, index) => {
-                const displayName = viewMode === 'theme' && THEME_LABELS[item.name]
-                  ? THEME_LABELS[item.name]
-                  : item.name;
-
                 const isActive = hoveredIndex === index;
 
                 return (
@@ -359,10 +420,8 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                     className={`
                       group relative
                       bg-gradient-to-br from-white to-purple-50/30 backdrop-blur
-                      rounded-xl p-4
-                      border-2
-                      transition-all duration-300
-                      text-left
+                      rounded-xl p-3 sm:p-4
+                      border-2 transition-all duration-300 text-left
                       ${FOCUS_RING}
                       ${isActive
                         ? 'border-purple-500 shadow-2xl scale-105 -translate-y-1'
@@ -373,8 +432,7 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                     <div className="flex items-center gap-3">
                       <div
                         className={`
-                          rounded-full flex-shrink-0
-                          ring-4 ring-white shadow-lg
+                          rounded-full flex-shrink-0 ring-4 ring-white shadow-lg
                           transition-all duration-300
                           ${isActive ? 'w-6 h-6' : 'w-5 h-5'}
                         `}
@@ -382,24 +440,23 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                       />
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate text-sm mb-1">
-                          {displayName}
+                        <p className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-1">
+                          {item.name}
                         </p>
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline gap-2 flex-wrap">
                           <p
-                            className={`font-bold transition-all ${isActive ? 'text-xl' : 'text-lg'}`}
+                            className={`font-bold transition-all ${isActive ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`}
                             style={{ color: item.color }}
                           >
                             {formatPrice(item.value)}
                           </p>
-                          <p className="text-gray-500 text-sm">
+                          <p className="text-gray-500 text-xs sm:text-sm whitespace-nowrap">
                             ({item.percentage}%)
                           </p>
                         </div>
                       </div>
 
-                      {/* Icône "voir détails" */}
-                      <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
@@ -408,18 +465,19 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
               })}
             </div>
 
-            {/* Bouton Export CSV */}
-            <div className="mt-8 text-center">
+            {/* Export CSV */}
+            <div className="mt-6 sm:mt-8 text-center">
               <button
                 onClick={handleExportCSV}
                 className={`
                   inline-flex items-center gap-2
-                  px-6 py-3
+                  px-5 py-3 sm:px-6 sm:py-3
                   bg-gradient-to-r from-purple-600 to-blue-600
                   hover:from-purple-700 hover:to-blue-700
-                  text-white font-semibold
+                  text-white font-semibold text-sm sm:text-base
                   rounded-xl shadow-lg hover:shadow-xl
                   transition-all hover:scale-105
+                  w-full sm:w-auto
                   ${FOCUS_RING}
                 `}
               >
@@ -432,12 +490,12 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
           </>
         ) : (
           /* État vide */
-          <div className="text-center py-16 px-4">
+          <div className="text-center py-12 sm:py-16 px-4">
             <div className="inline-block p-6 bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 rounded-full mb-6">
-              <span className="text-6xl">📭</span>
+              <span className="text-5xl sm:text-6xl">📭</span>
             </div>
-            <p className="text-xl font-semibold text-gray-800 mb-2">Aucune donnée pour cette vue</p>
-            <p className="text-gray-600 max-w-md mx-auto">
+            <p className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Aucune donnée pour cette vue</p>
+            <p className="text-sm sm:text-base text-gray-600 max-w-md mx-auto">
               {viewMode === 'list' && 'Réservez des cadeaux dans des listes pour voir la répartition par liste'}
               {viewMode === 'person' && 'Réservez des cadeaux pour voir la répartition par personne'}
               {viewMode === 'theme' && 'Réservez des cadeaux pour voir la répartition par thème'}
@@ -447,7 +505,6 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
         )}
       </div>
 
-      {/* ✅ Tooltip modal détaillé */}
       <DetailedTooltip />
     </div>
   );

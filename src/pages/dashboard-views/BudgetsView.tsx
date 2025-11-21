@@ -1,6 +1,5 @@
 // 📄 src/pages/dashboard-views/BudgetsView.tsx
-// 🧠 Rôle : Vue Budgets intégrée au Dashboard (VERSION FINALE v3)
-
+// 🧠 Rôle : Vue Budgets MOBILE-FIRST (correction responsive)
 
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -31,7 +30,6 @@ export default function BudgetsView() {
     b.budgetGoal.type === 'annuel' && b.budgetGoal.year === selectedYear
   )?.spent || 0;
 
-  // Stats rapides
   const activeBudgets = budgets.filter(b => b.spent > 0);
   const avgPerBudget = activeBudgets.length > 0 ? totalSpent / activeBudgets.length : 0;
   const topBudget = [...budgets].sort((a, b) => b.spent - a.spent)[0];
@@ -75,7 +73,7 @@ export default function BudgetsView() {
 
   return (
     <div className="space-y-6">
-      {/* ✅ 1. Header avec année + actions */}
+      {/* ✅ Header */}
       <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl p-6 border-2 border-purple-200/50 shadow-lg">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1">
@@ -137,7 +135,6 @@ export default function BudgetsView() {
       </div>
 
       {budgets.length === 0 ? (
-        /* État vide */
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-12 sm:p-16 text-center">
           <div className="text-6xl sm:text-8xl mb-6">🎁</div>
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
@@ -167,85 +164,109 @@ export default function BudgetsView() {
         </div>
       ) : (
         <>
-          {/* ✅ 2. Layout principal : Donut (2/3) + Colonne Stats & Budgets (1/3) */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* MOBILE : Stats en premier */}
-            <div className="xl:hidden space-y-6">
-              {/* Stats mobile */}
-              <section>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  📊 Statistiques rapides
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Total */}
-                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-                      <p className="text-sm text-gray-600 mb-1">Total dépensé</p>
-                      <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                        {formatPrice(totalSpent)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Moyenne */}
-                  {activeBudgets.length > 0 && (
-                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
-                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
-                        <p className="text-sm text-gray-600 mb-1">Moyenne par budget</p>
-                        <p className="text-3xl font-bold text-blue-600">
-                          {formatPrice(avgPerBudget)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Top budget */}
-                  {topBudget && topBudget.spent > 0 && (
-                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
-                      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
-                        <p className="text-sm text-gray-600 mb-1">🏆 Budget le plus élevé</p>
-                        <p className="font-bold text-gray-900 text-base mb-1 truncate">
-                          {topBudget.budgetGoal.name || 'Budget annuel'}
-                        </p>
-                        <p className="text-2xl font-bold text-orange-600">
-                          {formatPrice(topBudget.spent)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Budgets actifs */}
-                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                      <p className="text-sm text-gray-600 mb-1">Budgets actifs</p>
-                      <p className="text-3xl font-bold text-green-600">
-                        {activeBudgets.length} <span className="text-xl text-gray-500">/ {budgets.length}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Budgets mobile */}
-              <section>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  📋 Vos budgets
-                </h3>
+          {/* ✅ MOBILE : Ordre logique Stats → Budgets → Donut */}
+          <div className="block xl:hidden space-y-6">
+            {/* Stats */}
+            <section>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                📊 Statistiques rapides
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {budgets.map(budgetData => (
-                      <BudgetCard
-                        key={budgetData.budgetGoal.id}
-                        budgetData={budgetData}
-                        onEditLimit={() => alert('Modal modifier limite à implémenter')}
-                      />
-                    ))}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                    <p className="text-sm text-gray-600 mb-1">Total dépensé</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      {formatPrice(totalSpent)}
+                    </p>
                   </div>
                 </div>
-              </section>
-            </div>
 
-            {/* DESKTOP : Donut (2/3) */}
+                {activeBudgets.length > 0 && (
+                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+                      <p className="text-sm text-gray-600 mb-1">Moyenne par budget</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {formatPrice(avgPerBudget)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {topBudget && topBudget.spent > 0 && (
+                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                      <p className="text-sm text-gray-600 mb-1">🏆 Budget le plus élevé</p>
+                      <p className="font-bold text-gray-900 text-base mb-1 truncate">
+                        {topBudget.budgetGoal.name || 'Budget annuel'}
+                      </p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {formatPrice(topBudget.spent)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                    <p className="text-sm text-gray-600 mb-1">Budgets actifs</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      {activeBudgets.length} <span className="text-xl text-gray-500">/ {budgets.length}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Budgets */}
+            <section>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                📋 Vos budgets
+              </h3>
+              <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
+                <div className="space-y-3">
+                  {budgets.map(budgetData => (
+                    <BudgetCard
+                      key={budgetData.budgetGoal.id}
+                      budgetData={budgetData}
+                      onEditLimit={() => alert('Modal modifier limite à implémenter')}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Donut (UNE SEULE FOIS) */}
+            <section>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                📈 Répartition des dépenses
+              </h3>
+
+              {donutLoading ? (
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-12 text-center border border-purple-200/50">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mb-4"></div>
+                  <p className="text-gray-600 font-medium">Chargement du graphique...</p>
+                </div>
+              ) : donutData.length > 0 ? (
+                <BudgetDonut
+                  data={donutData}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  totalSpent={totalSpent}
+                />
+              ) : (
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-12 text-center border border-purple-200/50">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p className="text-gray-600 text-lg">
+                    Graphique disponible dès que vous aurez des cadeaux réservés
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* ✅ DESKTOP : Layout 2/3 + 1/3 */}
+          <div className="hidden xl:grid xl:grid-cols-3 gap-6">
+            {/* Donut (2/3) */}
             <div className="xl:col-span-2">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 📈 Répartition des dépenses
@@ -277,15 +298,13 @@ export default function BudgetsView() {
               )}
             </div>
 
-            {/* DESKTOP : Colonne Stats + Budgets (1/3) */}
-            <div className="hidden xl:block space-y-6">
-              {/* Stats desktop */}
+            {/* Stats + Budgets (1/3) */}
+            <div className="space-y-6">
               <section>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   📊 Statistiques
                 </h3>
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5 space-y-4">
-                  {/* Total */}
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
                     <p className="text-sm text-gray-600 mb-1">Total dépensé</p>
                     <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -293,7 +312,6 @@ export default function BudgetsView() {
                     </p>
                   </div>
 
-                  {/* Moyenne */}
                   {activeBudgets.length > 0 && (
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
                       <p className="text-sm text-gray-600 mb-1">Moyenne par budget</p>
@@ -303,7 +321,6 @@ export default function BudgetsView() {
                     </div>
                   )}
 
-                  {/* Top budget */}
                   {topBudget && topBudget.spent > 0 && (
                     <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
                       <p className="text-sm text-gray-600 mb-1">🏆 Budget le plus élevé</p>
@@ -316,7 +333,6 @@ export default function BudgetsView() {
                     </div>
                   )}
 
-                  {/* Budgets actifs */}
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
                     <p className="text-sm text-gray-600 mb-1">Budgets actifs</p>
                     <p className="text-2xl font-bold text-green-600">
@@ -326,7 +342,6 @@ export default function BudgetsView() {
                 </div>
               </section>
 
-              {/* Budgets desktop */}
               <section>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   📋 Vos budgets
@@ -343,38 +358,9 @@ export default function BudgetsView() {
               </section>
             </div>
           </div>
-
-          {/* MOBILE : Donut en dernier */}
-          <div className="xl:hidden">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              📈 Répartition des dépenses
-            </h3>
-
-            {donutLoading ? (
-              <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-12 text-center border border-purple-200/50">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mb-4"></div>
-                <p className="text-gray-600 font-medium">Chargement du graphique...</p>
-              </div>
-            ) : donutData.length > 0 ? (
-              <BudgetDonut
-                data={donutData}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                totalSpent={totalSpent}
-              />
-            ) : (
-              <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-12 text-center border border-purple-200/50">
-                <div className="text-6xl mb-4">📊</div>
-                <p className="text-gray-600 text-lg">
-                  Graphique disponible dès que vous aurez des cadeaux réservés
-                </p>
-              </div>
-            )}
-          </div>
         </>
       )}
 
-      {/* Modal cadeau hors-app */}
       <ExternalGiftModal
         isOpen={showExternalGiftModal}
         onClose={() => setShowExternalGiftModal(false)}
