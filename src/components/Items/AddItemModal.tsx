@@ -19,7 +19,7 @@ interface AddItemModalProps {
     size: string;
     color: string;
     promo_code: string;
-    shipping_cost: number | null;
+    shipping_cost?: number | null; // ✅ maintenant optionnel
   }) => Promise<void>;
   editMode?: boolean;
   initialData?: {
@@ -35,6 +35,7 @@ interface AddItemModalProps {
     shipping_cost?: number | null;
   };
 }
+
 
 type FetchOGResponse = {
   title?: string;

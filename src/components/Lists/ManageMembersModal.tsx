@@ -23,7 +23,9 @@ interface ManageMembersModalProps {
   members: Member[];
   onMembersChange?: (members: Member[]) => void;
   onToast?: (toast: { type: 'success' | 'error'; message: string }) => void;
+  isOwner?: boolean; // ✅ pour satisfaire les appels existants
 }
+
 
 export default function ManageMembersModal({
   isOpen,
