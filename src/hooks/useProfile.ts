@@ -84,36 +84,66 @@ export function useProfile(userId?: string) {
     if (!userId) throw new Error('User ID manquant');
 
     try {
-      const { data: profileData } = await supabase
+      // ✅ 1. Profil
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      if (profileError) throw profileError;
+
+      // ✅ 2. Listes avec items
       const { data: wishlistsData } = await supabase
         .from('wishlists')
         .select('*, items (*)')
         .eq('owner_id', userId);
 
-      const { data: claimsData } = await supabase
+      // ✅ 3. MES réservations (avec les bons noms de colonnes)
+      const { data: claimsData, error: claimsError } = await supabase
         .from('claims')
-        .select('*, items (name, wishlists (name))')
-        .eq('user_id', userId);
+        .select(`
+          id,
+          status,
+          reserved_at,
+          paid_amount,
+          items (
+            title,
+            price,
+            url,
+            original_wishlist_name,
+            wishlists (
+              name
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .order('reserved_at', { ascending: false });
 
+      if (claimsError) {
+        console.error('❌ Erreur claims:', claimsError);
+      }
+
+      // ✅ 4. Budgets
       const { data: budgetsData } = await supabase
         .from('budget_goals')
         .select('*')
         .eq('user_id', userId);
 
+      // ✅ 5. Construction export
       const exportData = {
+        meta: {
+          version: '2.0',
+          exportDate: new Date().toISOString(),
+          userId: userId,
+        },
         profile: profileData,
-        wishlists: wishlistsData,
-        claims: claimsData,
-        budgets: budgetsData,
-        exportDate: new Date().toISOString(),
-        version: '1.0',
+        myWishlists: wishlistsData || [],
+        myReservations: claimsData || [],
+        budgets: budgetsData || [],
       };
 
+      // ✅ 6. Téléchargement
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: 'application/json',
       });
@@ -137,22 +167,18 @@ export function useProfile(userId?: string) {
     if (!userId) throw new Error('User ID manquant');
 
     try {
-      const { error: profileError } = await supabase
+      // 1️⃣ Supprimer le profil (le trigger SQL s'occupe du reste)
+      const { error: deleteError } = await supabase
         .from('profiles')
-        .update({
-          deleted_at: new Date().toISOString(),
-          username: `deleted_${userId.slice(0, 8)}`,
-          display_name: null,
-          bio: null,
-          avatar_url: null,
-        })
+        .delete()
         .eq('id', userId);
 
-      if (profileError) throw profileError;
+      if (deleteError) throw deleteError;
 
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) throw authError;
+      // 2️⃣ Déconnecter l'utilisateur
+      await supabase.auth.signOut();
 
+      console.log('✅ Compte supprimé avec succès');
       return true;
     } catch (err) {
       console.error('❌ Erreur suppression compte:', err);

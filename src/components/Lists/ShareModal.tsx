@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Lists/ShareModal.tsx
-// 🔧 FIX : Détecter si c'est un profil ou une liste
+// 🔧 FIX : Message adapté selon si c'est son propre profil ou celui de quelqu'un d'autre
 
 import { useState } from 'react';
 import { FOCUS_RING } from '../../utils/constants';
@@ -12,7 +12,8 @@ interface ShareModalProps {
   wishlistSlug: string;
   wishlistName: string;
   visibility: 'privée' | 'partagée' | 'publique';
-  isProfile?: boolean; // ⬅️ NOUVEAU : flag pour profil
+  isProfile?: boolean;
+  isOwnProfile?: boolean; // ⬅️ NOUVEAU : Est-ce que c'est MON profil ou celui de quelqu'un d'autre ?
 }
 
 export default function ShareModal({
@@ -21,7 +22,8 @@ export default function ShareModal({
   wishlistSlug,
   wishlistName,
   visibility,
-  isProfile = false, // ⬅️ NOUVEAU
+  isProfile = false,
+  isOwnProfile = true, // ⬅️ Par défaut = mon profil
 }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -30,7 +32,6 @@ export default function ShareModal({
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-  // ⬅️ FIX : URL différente pour profil vs liste
   const shareUrl = isProfile
     ? `${window.location.origin}${basePath}/profile/${wishlistSlug}`
     : `${window.location.origin}${basePath}/list/${wishlistSlug}`;
@@ -38,9 +39,15 @@ export default function ShareModal({
   const hasNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
 
   const getShareMessage = () => {
-    // ⬅️ FIX : Message différent pour profil
+    // ⬅️ FIX : Message différent pour profil (selon si c'est le tien ou celui de quelqu'un d'autre)
     if (isProfile) {
-      return `👤 ${wishlistName}\n\nDécouvre mon profil et mes listes de souhaits ! ✨\n\n${shareUrl}`;
+      if (isOwnProfile) {
+        // Depuis ProfilePrivate (mon profil)
+        return `👤 ${wishlistName}\n\nDécouvre mon profil et mes listes de souhaits ! ✨\n\n${shareUrl}`;
+      } else {
+        // Depuis ProfilePublic (profil de quelqu'un d'autre)
+        return `👤 ${wishlistName}\n\nDécouvre le profil et les listes de souhaits de ${wishlistName} ! ✨\n\n${shareUrl}`;
+      }
     }
 
     const base = `🎁 ${wishlistName}\n\n`;
@@ -134,7 +141,7 @@ export default function ShareModal({
               </button>
 
               <h2 id="modal-title" className="text-xl sm:text-2xl font-bold mb-1 pr-8">
-                {isProfile ? 'Partager mon profil 👤' : 'Partager la liste 🔗'}
+                {isProfile ? (isOwnProfile ? 'Partager mon profil 👤' : `Partager le profil de ${wishlistName} 👤`) : 'Partager la liste 🔗'}
               </h2>
               <p className="text-xs sm:text-sm opacity-90">
                 {wishlistName}

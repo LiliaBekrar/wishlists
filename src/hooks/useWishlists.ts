@@ -208,7 +208,7 @@ export function useWishlists() {
       // 1️⃣ Récupérer infos de la liste
       const { data: wishlist, error: fetchError } = await supabase
         .from('wishlists')
-        .select('owner_id, name')
+        .select('owner_id, name, theme')
         .eq('id', id)
         .single();
 
@@ -221,7 +221,7 @@ export function useWishlists() {
       // 2️⃣ Compter les items réservés
       const { data: reservedItems } = await supabase
         .from('items')
-        .select('id, name')
+        .select('id, title')
         .eq('wishlist_id', id)
         .eq('status', 'réservé');
 
@@ -252,9 +252,10 @@ export function useWishlists() {
         const { error: orphanError } = await supabase
           .from('items')
           .update({
-            wishlist_id: null, // ⬅️ Orpheliner
-            original_wishlist_name: wishlist.name, // ⬅️ Tracer l'origine
+            wishlist_id: null,
+            original_wishlist_name: wishlist.name,
             original_owner_id: wishlist.owner_id,
+            original_theme: wishlist.theme, // ⬅️ NOUVEAU : conserver le thème
           })
           .eq('wishlist_id', id)
           .eq('status', 'réservé');

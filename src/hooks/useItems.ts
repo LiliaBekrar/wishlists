@@ -25,6 +25,7 @@ export interface Item {
   created_at: string;
   original_wishlist_name?: string | null;
   original_owner_id?: string | null;
+  original_theme?: string | null;
 }
 
 export function useItems(wishlistId: string | undefined) {

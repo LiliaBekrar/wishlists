@@ -37,15 +37,24 @@ export interface Wishlist {
 // ⚙️ ITEMS
 export interface Item {
   id: string;
-  wishlist_id: string;
+  wishlist_id: string | null;
   title: string;
-  description: string | null;
-  price: number;
+  note: string | null;
   url: string | null;
   image_url: string | null;
-  priority: 'haute' | 'moyenne' | 'basse';
+  price: number;
+  priority: 'basse' | 'moyenne' | 'haute';
   status: 'disponible' | 'réservé';
+  quantity: number;
+  position: number;
+  size: string | null;
+  color: string | null;
+  model: string | null;
+  promo_code: string | null;
   created_at: string;
+  original_wishlist_name?: string | null;
+  original_owner_id?: string | null;
+  original_theme?: string | null;
 
   // Relations
   claims?: Claim[];

@@ -236,7 +236,8 @@ export default function Dashboard() {
               if (claimDate) {
                 const claimYear = new Date(claimDate).getFullYear();
                 if (claimYear === currentYear) {
-                  const theme = claim.items?.wishlists?.theme || 'autre';
+                  // ✅ Priorité : thème actuel de la wishlist, sinon thème original de l'item
+                  const theme = claim.items?.wishlists?.theme || claim.items?.original_theme || 'autre';
                   themes.add(theme);
                 }
               }

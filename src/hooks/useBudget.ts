@@ -32,14 +32,15 @@ export function useBudget(userId: string) {
 
       const currentYear = new Date().getFullYear();
 
-      // 1️⃣ Récupérer les claims (in-app)
+      // 1️⃣ Récupérer les claims (in-app) - ✅ Ajouter original_theme
       const { data: claims, error: claimsError } = await supabase
         .from('claims')
         .select(`
           *,
           items!inner(
             price,
-            wishlists!inner(
+            original_theme,
+            wishlists(
               theme,
               profiles!wishlists_owner_id_fkey!inner(display_name)
             )
@@ -133,7 +134,7 @@ export function useBudget(userId: string) {
 
 /**
  * Hook pour données du donut (par personne/thème/liste)
- * ✅ NOUVEAU : Inclut la liste détaillée des items pour le tooltip
+ * ✅ MODIFIÉ : Ajoute original_theme dans la requête
  */
 export function useBudgetDonutData(
   userId: string,
@@ -156,7 +157,7 @@ export function useBudgetDonutData(
       try {
         setLoading(true);
 
-        // Récupérer claims avec détails
+        // Récupérer claims avec détails + original_theme
         const { data: claims, error: claimsError } = await supabase
           .from('claims')
           .select(`
@@ -167,7 +168,8 @@ export function useBudgetDonutData(
             items!inner(
               title,
               price,
-              wishlists!inner(
+              original_theme,
+              wishlists(
                 owner_id,
                 theme,
                 name,
@@ -211,14 +213,14 @@ export function useBudgetDonutData(
         const itemsByCategory = new Map<string, Array<{ title: string; price: number }>>();
 
         if (viewMode === 'global' || viewMode === 'theme') {
-          // Vue globale/thème
+          // Vue globale/thème - ✅ Utiliser original_theme en fallback
           claims?.forEach((claim: any) => {
             const claimDate = claim.reserved_at || claim.created_at;
             if (!claimDate) return;
             const claimYear = new Date(claimDate).getFullYear();
             if (claimYear !== year) return;
 
-            const theme = claim.items?.wishlists?.theme || 'autre';
+            const theme = claim.items?.wishlists?.theme || claim.items?.original_theme || 'autre';
             const amount = claim.paid_amount || claim.items?.price || 0;
             const title = claim.items?.title || 'Cadeau sans titre';
 

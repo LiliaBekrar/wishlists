@@ -93,7 +93,7 @@ export function calculateAnnualSpent(
 
   // Claims in-app
   claims.forEach(claim => {
-    const claimDate = claim.reserved_at || claim.created_at; // ✅ Fallback sur created_at
+    const claimDate = claim.reserved_at || claim.created_at;
     if (!claimDate) return;
 
     const claimYear = new Date(claimDate).getFullYear();
@@ -115,32 +115,32 @@ export function calculateAnnualSpent(
 
 /**
  * Calcule le total dépensé pour un budget thématique (noël, anniversaire, etc.)
- * Période : 1er janv → 31 déc de l'année N
+ * ✅ CORRIGÉ : Utilise original_theme si wishlist supprimée
  */
 export function calculateThemeSpent(
   claims: Claim[],
   externalGifts: ExternalGift[],
-  theme: string, // 'noël' | 'anniversaire' | 'naissance' | 'mariage' | 'autre'
+  theme: string,
   year: number
 ): number {
   let total = 0;
 
-  // Claims in-app (filtrer par thème de la liste)
+  // Claims in-app (avec fallback sur original_theme)
   claims.forEach(claim => {
-    if (!claim.items?.wishlists) return;
-
-    const claimDate = claim.reserved_at || claim.created_at; // ✅ Fallback sur created_at
+    const claimDate = claim.reserved_at || claim.created_at;
     if (!claimDate) return;
 
     const claimYear = new Date(claimDate).getFullYear();
-    const claimTheme = claim.items.wishlists.theme;
+
+    // ✅ Priorité : theme de la wishlist actuelle, sinon original_theme
+    const claimTheme = claim.items?.wishlists?.theme || claim.items?.original_theme || 'autre';
 
     if (claimYear === year && claimTheme === theme) {
-      total += claim.paid_amount || claim.items.price || 0;
+      total += claim.paid_amount || claim.items?.price || 0;
     }
   });
 
-  // External gifts (filtrer par thème du cadeau)
+  // External gifts
   externalGifts.forEach(gift => {
     const giftYear = new Date(gift.purchase_date).getFullYear();
     if (giftYear === year && gift.theme === theme) {
@@ -162,7 +162,7 @@ export function countAnnualItems(
   let count = 0;
 
   claims.forEach(claim => {
-    const claimDate = claim.reserved_at || claim.created_at; // ✅ Fallback sur created_at
+    const claimDate = claim.reserved_at || claim.created_at;
     if (!claimDate) return;
 
     const claimYear = new Date(claimDate).getFullYear();
@@ -179,6 +179,7 @@ export function countAnnualItems(
 
 /**
  * Compte le nombre de cadeaux pour un budget thématique
+ * ✅ CORRIGÉ : Utilise original_theme si wishlist supprimée
  */
 export function countThemeItems(
   claims: Claim[],
@@ -189,13 +190,13 @@ export function countThemeItems(
   let count = 0;
 
   claims.forEach(claim => {
-    if (!claim.items?.wishlists) return;
-
-    const claimDate = claim.reserved_at || claim.created_at; // ✅ Fallback sur created_at
+    const claimDate = claim.reserved_at || claim.created_at;
     if (!claimDate) return;
 
     const claimYear = new Date(claimDate).getFullYear();
-    const claimTheme = claim.items.wishlists.theme;
+
+    // ✅ Priorité : theme de la wishlist actuelle, sinon original_theme
+    const claimTheme = claim.items?.wishlists?.theme || claim.items?.original_theme || 'autre';
 
     if (claimYear === year && claimTheme === theme) count++;
   });
