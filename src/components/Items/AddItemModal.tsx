@@ -19,8 +19,8 @@ interface AddItemModalProps {
     size: string;
     color: string;
     promo_code: string;
+    shipping_cost: number | null;
   }) => Promise<void>;
-  // ⬅️ NOUVEAU : Props pour l'édition
   editMode?: boolean;
   initialData?: {
     name: string;
@@ -32,8 +32,19 @@ interface AddItemModalProps {
     size: string;
     color: string;
     promo_code: string;
+    shipping_cost?: number | null;
   };
 }
+
+type FetchOGResponse = {
+  title?: string;
+  description?: string;
+  image?: string;
+  images?: string[];
+  price?: number;
+  color?: string;
+  size?: string;
+};
 
 export default function AddItemModal({
   isOpen,
@@ -51,12 +62,13 @@ export default function AddItemModal({
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [shippingFees, setShippingFees] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchingOG, setFetchingOG] = useState(false);
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
 
-  // ⬅️ NOUVEAU : Fonction pour reset le formulaire
   const resetForm = () => {
     setName('');
     setDescription('');
@@ -67,13 +79,13 @@ export default function AddItemModal({
     setSize('');
     setColor('');
     setPromoCode('');
+    setShippingFees('');
     setImageMode('url');
+    setAvailableImages([]);
   };
 
-  // ⬅️ NOUVEAU : useEffect pour pré-remplir en mode édition
   useEffect(() => {
     if (isOpen && editMode && initialData) {
-      // Mode édition : pré-remplir avec les données existantes
       console.log('🔵 Mode édition activé avec:', initialData);
       setName(initialData.name);
       setDescription(initialData.description || '');
@@ -84,8 +96,11 @@ export default function AddItemModal({
       setSize(initialData.size || '');
       setColor(initialData.color || '');
       setPromoCode(initialData.promo_code || '');
+      setShippingFees(
+        initialData.shipping_cost != null ? initialData.shipping_cost.toString() : ''
+      );
+      setAvailableImages([]);
     } else if (isOpen && !editMode) {
-      // Mode création : reset le formulaire
       console.log('🔵 Mode création - Reset formulaire');
       resetForm();
     }
@@ -101,22 +116,28 @@ export default function AddItemModal({
       return;
     }
 
+    const trimmedShipping = shippingFees.trim();
+    const shipping_cost =
+      trimmedShipping === ''
+        ? null
+        : parseFloat(trimmedShipping.replace(',', '.'));
+
     setLoading(true);
 
     try {
       await onSubmit({
         name,
         description,
-        url: url || '',
-        image_url: imageUrl || '',
+        url,
+        image_url: imageUrl,
         price: parseFloat(price),
         priority,
-        size: size || '',
-        color: color || '',
-        promo_code: promoCode || '',
+        size,
+        color,
+        promo_code: promoCode,
+        shipping_cost,
       });
 
-      // Reset uniquement en mode création
       if (!editMode) {
         resetForm();
       }
@@ -134,7 +155,6 @@ export default function AddItemModal({
     }
   };
 
-// Fetch Open Graph via Edge Function Supabase
   const handleFetchOG = async () => {
     if (!url.trim()) return;
 
@@ -143,7 +163,7 @@ export default function AddItemModal({
     try {
       console.log('🔵 Fetch Open Graph via edge function pour:', url);
 
-      const { data, error } = await supabase.functions.invoke('fetch-og', {
+      const { data, error } = await supabase.functions.invoke<FetchOGResponse>('fetch-og', {
         body: { url },
       });
 
@@ -156,16 +176,24 @@ export default function AddItemModal({
         throw new Error('Aucune donnée retournée');
       }
 
-      // data = { title, description, image, price }
       if (data.title && !name) setName(data.title);
       if (data.description && !description) setDescription(data.description);
-      if (data.image && !imageUrl) setImageUrl(data.image);
+
+      if (Array.isArray(data.images) && data.images.length > 0) {
+        setAvailableImages(data.images);
+        if (!imageUrl) {
+          setImageUrl(data.images[0]);
+        }
+      } else if (data.image && !imageUrl) {
+        setImageUrl(data.image);
+        setAvailableImages([data.image]);
+      }
+
       if (typeof data.price === 'number' && !price) {
         setPrice(String(data.price));
       }
       if (data.color && !color) setColor(data.color);
       if (data.size && !size) setSize(data.size);
-
 
       console.log('✅ Open Graph récupéré via edge:', data);
     } catch (error) {
@@ -183,17 +211,17 @@ export default function AddItemModal({
     setUploadingImage(true);
 
     try {
-      // Récupérer l'user ID
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Non authentifié');
 
-      // Upload l'image
       const publicUrl = await uploadItemImage(file, user.id);
 
-      // Mettre l'URL dans le champ
       setImageUrl(publicUrl);
+      setAvailableImages((prev) =>
+        prev.includes(publicUrl) ? prev : [...prev, publicUrl]
+      );
 
       console.log('✅ Image uploadée:', publicUrl);
     } catch (error) {
@@ -238,7 +266,7 @@ export default function AddItemModal({
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* URL avec bouton fetch */}
+          {/* URL + Auto */}
           <div>
             <label htmlFor="item-url" className="block text-sm font-semibold text-gray-700 mb-2">
               🔗 Lien du produit
@@ -311,7 +339,6 @@ export default function AddItemModal({
               🖼️ Image du produit (optionnel)
             </label>
 
-            {/* Tabs URL / Upload */}
             <div className="flex gap-2 mb-3">
               <button
                 type="button"
@@ -340,7 +367,6 @@ export default function AddItemModal({
             </div>
 
             {imageMode === 'url' ? (
-              /* Mode URL */
               <input
                 id="item-image-url"
                 type="url"
@@ -351,7 +377,6 @@ export default function AddItemModal({
                 disabled={loading}
               />
             ) : (
-              /* Mode Upload */
               <div>
                 <div className="relative">
                   <input
@@ -411,27 +436,61 @@ export default function AddItemModal({
               </div>
             )}
 
-            {/* Aperçu image */}
             {imageUrl && (
-              <div className="mt-3 relative inline-block">
-                <img src={imageUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200" />
-                <button
-                  type="button"
-                  onClick={() => setImageUrl('')}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all"
-                  title="Supprimer l'image"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+              <div className="mt-3">
+                <div className="relative inline-block">
+                  <img
+                    src={imageUrl}
+                    alt="Aperçu"
+                    className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageUrl('');
+                      setAvailableImages([]);
+                    }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all"
+                    title="Supprimer l'image"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {availableImages.length > 1 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-600 mb-1">
+                      Plusieurs images trouvées, choisis celle que tu préfères :
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableImages.map((img) => (
+                        <button
+                          key={img}
+                          type="button"
+                          onClick={() => setImageUrl(img)}
+                          className={`border-2 rounded-lg p-0.5 transition-all ${
+                            imageUrl === img ? 'border-purple-500 ring-2 ring-purple-300' : 'border-gray-200'
+                          }`}
+                          title="Choisir cette image"
+                        >
+                          <img
+                            src={img}
+                            alt="Choix d'image"
+                            className="w-16 h-16 object-cover rounded-md"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Prix et Priorité */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Prix OBLIGATOIRE */}
+          {/* Prix, Frais de port, Priorité */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="item-price" className="block text-sm font-semibold text-gray-700 mb-2">
                 💰 Prix * <span className="text-red-600">(obligatoire)</span>
@@ -455,7 +514,29 @@ export default function AddItemModal({
               </div>
             </div>
 
-            {/* Priorité */}
+            <div>
+              <label htmlFor="item-shipping" className="block text-sm font-semibold text-gray-700 mb-2">
+                🚚 Frais de port (optionnel)
+              </label>
+              <div className="relative">
+                <input
+                  id="item-shipping"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="4.99"
+                  value={shippingFees}
+                  onChange={(e) => setShippingFees(e.target.value)}
+                  className={`w-full px-4 py-3 pr-8 text-base border-2 border-gray-200 rounded-xl transition-all ${FOCUS_RING} hover:border-purple-300`}
+                  disabled={loading}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">€</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Laisse vide si frais de port offerts ou inconnus.
+              </p>
+            </div>
+
             <div>
               <label htmlFor="item-priority" className="block text-sm font-semibold text-gray-700 mb-2">
                 ⭐ Priorité
@@ -476,7 +557,6 @@ export default function AddItemModal({
 
           {/* Taille, Couleur, Code Promo */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Taille */}
             <div>
               <label htmlFor="item-size" className="block text-sm font-semibold text-gray-700 mb-2">
                 📏 Taille (optionnel)
@@ -493,7 +573,6 @@ export default function AddItemModal({
               />
             </div>
 
-            {/* Couleur */}
             <div>
               <label htmlFor="item-color" className="block text-sm font-semibold text-gray-700 mb-2">
                 🎨 Couleur (optionnel)
@@ -510,7 +589,6 @@ export default function AddItemModal({
               />
             </div>
 
-            {/* Code Promo */}
             <div>
               <label htmlFor="item-promo" className="block text-sm font-semibold text-gray-700 mb-2">
                 🎟️ Code promo (optionnel)

@@ -173,13 +173,13 @@ export function useMembers(wishlistId?: string) {
         memberProfile?.email?.split('@')[0] ||
         'Un membre';
 
-      const memberMail = memberProfile?.email
+      const memberUsername = memberProfile?.username
 
       await createNotification({
         userId: wishlist.owner_id,
         type: 'acces_refuse',
         title: '👋 Un membre a quitté',
-        message: `${memberName}(${memberMail}) a quitté la liste "${wishlist.name}"`,
+        message: `${memberName}(${memberUsername}) a quitté la liste "${wishlist.name}"`,
         data: {
           wishlistId,
           wishlistName: wishlist.name,

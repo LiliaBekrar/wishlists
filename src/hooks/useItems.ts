@@ -22,6 +22,7 @@ export interface Item {
   color: string | null;
   model: string | null;
   promo_code: string | null;
+  shipping_cost?: number | null; // 🆕 frais de port
   created_at: string;
   original_wishlist_name?: string | null;
   original_owner_id?: string | null;
@@ -54,7 +55,7 @@ export function useItems(wishlistId: string | undefined) {
       if (fetchError) throw fetchError;
 
       console.log('✅ Items chargés:', data);
-      setItems(data || []);
+      setItems((data || []) as Item[]);
       setError(null);
     } catch (err) {
       console.error('❌ Erreur chargement items:', err);
@@ -74,6 +75,7 @@ export function useItems(wishlistId: string | undefined) {
     size: string;
     color: string;
     promo_code: string;
+    shipping_cost: number | null;
   }) => {
     if (!wishlistId) throw new Error('Wishlist ID manquant');
 
@@ -93,9 +95,10 @@ export function useItems(wishlistId: string | undefined) {
           size: input.size?.trim() || null,
           color: input.color?.trim() || null,
           promo_code: input.promo_code?.trim() || null,
+          shipping_cost: input.shipping_cost ?? null, // 🆕 toujours null si vide
           status: 'disponible',
           quantity: 1,
-          position: items.length
+          position: items.length,
         })
         .select()
         .single();
@@ -105,7 +108,7 @@ export function useItems(wishlistId: string | undefined) {
           message: insertError.message,
           details: insertError.details,
           hint: insertError.hint,
-          code: insertError.code
+          code: insertError.code,
         });
         throw insertError;
       }
@@ -142,8 +145,6 @@ export function useItems(wishlistId: string | undefined) {
       if (claims) {
         console.log('📦 [deleteItem] Item réservé → archivage via fonction PostgreSQL');
 
-        // ⬅️ FIX : Récupérer item + wishlist séparément
-        // Récupérer l'item
         const { data: itemData, error: itemError } = await supabase
           .from('items')
           .select('title, wishlist_id')
@@ -161,7 +162,6 @@ export function useItems(wishlistId: string | undefined) {
 
         console.log('📊 [deleteItem] Item récupéré:', itemData);
 
-        // Récupérer la wishlist
         const { data: wishlistData, error: wishlistError } = await supabase
           .from('wishlists')
           .select('name, owner_id')
@@ -179,7 +179,6 @@ export function useItems(wishlistId: string | undefined) {
 
         console.log('📊 [deleteItem] Wishlist récupérée:', wishlistData);
 
-        // ⭐ APPELER LA FONCTION POSTGRESQL (bypass RLS)
         console.log('🔧 [deleteItem] Appel fonction archive_reserved_item...');
 
         const { data: result, error: archiveError } = await supabase.rpc('archive_reserved_item', {
@@ -200,7 +199,6 @@ export function useItems(wishlistId: string | undefined) {
 
         console.log('✅ [deleteItem] Fonction RPC retournée:', result);
 
-        // Notifier le membre
         console.log('🔔 [deleteItem] Envoi notification au membre:', claims.user_id);
 
         await createNotification({
@@ -217,9 +215,7 @@ export function useItems(wishlistId: string | undefined) {
         });
 
         console.log('✅ [deleteItem] Item archivé + notification envoyée');
-      }
-      // 3️⃣ Si non réservé → SUPPRIMER
-      else {
+      } else {
         console.log('🗑️ [deleteItem] Item non réservé → suppression définitive');
 
         const { error: deleteError } = await supabase
@@ -253,6 +249,6 @@ export function useItems(wishlistId: string | undefined) {
     error,
     fetchItems,
     createItem,
-    deleteItem
+    deleteItem,
   };
 }

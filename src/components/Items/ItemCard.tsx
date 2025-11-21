@@ -199,19 +199,28 @@ export default function ItemCard({
             <div>
               <h4 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2">{item.title}</h4>
 
-              {item.price && (
-                <div className="flex items-center gap-1.5 text-purple-600 mb-2">
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span className="font-bold text-lg">{item.price.toFixed(2)} €</span>
-                </div>
-              )}
+                {item.price && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1.5 text-purple-600">
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="font-bold text-lg">{item.price.toFixed(2)} €</span>
+                    </div>
+
+                    {item.shipping_cost != null && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        + {item.shipping_cost.toFixed(2)} € de frais de port
+                      </p>
+                    )}
+                  </div>
+                )}
+
 
               <div className="flex items-center gap-1.5 mb-2">
                 <span
@@ -284,20 +293,30 @@ export default function ItemCard({
             <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">{item.title}</h4>
 
             {item.price && (
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-xl font-bold text-purple-600 whitespace-nowrap">
-                  {item.price.toFixed(2)} €
-                </span>
+              <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-xl font-bold text-purple-600 whitespace-nowrap">
+                    {item.price.toFixed(2)} €
+                  </span>
+                </div>
+
+                {item.shipping_cost != null && (
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    + {item.shipping_cost.toFixed(2)} € de frais de port
+                  </span>
+                )}
               </div>
             )}
+
+
           </div>
 
           {item.note && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.note}</p>}

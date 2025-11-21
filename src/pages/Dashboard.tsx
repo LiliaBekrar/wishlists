@@ -18,8 +18,10 @@ import MemberWishlistsView from './dashboard-views/MemberWishlistsView';
 import MyClaimsView from './dashboard-views/MyClaimsView';
 import BudgetsView from './dashboard-views/BudgetsView';
 import Toast from '../components/Toast';
+import { useLocation } from 'react-router-dom';
 
 export default function Dashboard() {
+  const location = useLocation();
   const { user } = useAuth();
   const { wishlists, loading, createWishlist, updateWishlist, deleteWishlist } = useWishlists();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -54,6 +56,23 @@ export default function Dashboard() {
     open: boolean;
     wishlist: any | null;
   }>({ open: false, wishlist: null });
+
+  // 📌 Activer un onglet via l’URL (ex: /dashboard?view=claims)
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const view = params.get("view");
+
+  if (view === "claims") {
+    setActiveTab("my-claims");
+  }
+  if (view === "member-lists") {
+    setActiveTab("member-lists");
+  }
+  if (view === "budgets") {
+    setActiveTab("budgets");
+  }
+}, [location.search]);
+
 
   // 🆕 Charger le display_name / username depuis la table profiles
   useEffect(() => {

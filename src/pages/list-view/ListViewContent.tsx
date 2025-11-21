@@ -330,6 +330,7 @@ export default function ListViewContent({
             url: editModal.item.url || '',
             image_url: editModal.item.image_url || '',
             price: editModal.item.price ?? null,
+            shipping_cost: editModal.item.shipping_cost ?? null,
             priority: editModal.item.priority,
             size: editModal.item.size || '',
             color: editModal.item.color || '',

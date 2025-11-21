@@ -121,6 +121,7 @@ export default function ManageMembersModal({
                       member.profiles?.display_name ||
                       member.profiles?.username ||
                       'Utilisateur';
+                    const userUsername = member.profiles?.username ;
                     const isPending = member.status === 'en_attente';
 
                     return (
@@ -136,7 +137,9 @@ export default function ManageMembersModal({
 
                           {/* Infos */}
                           <div>
-                            <p className="font-semibold text-gray-900">{displayName}</p>
+                            <p className="font-semibold text-gray-900">
+                              {displayName} {userUsername && <span className="text-gray-500">(@{userUsername})</span>}
+                            </p>
                             <p className="text-sm text-gray-500">
                               {member.role === 'owner' && '👑 Propriétaire'}
                               {member.role === 'viewer' && isPending && '⏳ En attente'}
