@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+//* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/Profile/ProfileHeader.tsx
 // 🧠 Rôle : Header de profil partagé entre ProfilePrivate et ProfilePublic
 

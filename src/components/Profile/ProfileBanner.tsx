@@ -1,7 +1,6 @@
 // 📄 src/components/Profile/ProfileBanner.tsx
 // 🧠 Rôle : Bannière complète du profil (version fixée)
 
-import React from 'react';
 import { BANNER_HEIGHT } from '../../utils/constants';
 import ModernBanner from '../banners';
 import ProfileAvatar from './ProfileAvatar';
