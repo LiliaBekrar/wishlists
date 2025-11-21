@@ -81,7 +81,7 @@ export default function ProfileBanner({
           </div>
 
           {/* Phrase d'accroche - VERSION COMPACTE */}
-          <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-2xl border-2 border-white/30 transition-all hover:scale-105 animate-bounce-subtle" style={{ animationDelay: '0.4s' }}>
+          <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-full border-2 border-white/30 transition-all hover:scale-105 animate-bounce-subtle" style={{ animationDelay: '0.4s' }}>
             <span className="text-base sm:text-xl md:text-2xl animate-pulse">✨</span>
             <p className="text-xs sm:text-sm md:text-base font-bold leading-tight">
               {tagline}
