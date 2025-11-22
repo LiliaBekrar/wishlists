@@ -490,7 +490,7 @@ export default function Notifications() {
                             markAsRead(notif.id);
                             navigate(`/list/${notif.data.wishlistSlug}`);
                           }}
-                          className={`text-sm font-semibold text-purple-600 hover:text-purple-800 underline underline-offset-2 mt-1 ${FOCUS_RING}`}
+                          className={`mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-all ${FOCUS_RING}`}
                         >
                           📋 Voir la liste
                         </button>

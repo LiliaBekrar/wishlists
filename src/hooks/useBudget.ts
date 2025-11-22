@@ -314,7 +314,7 @@ export function useBudgetDonutData(
 
         console.log('✅ External gifts récupérés:', externalGifts.length);
 
-        const filteredExternal = externalGifts.filter(gift => {
+        const filteredExternal = externalGifts.filter((gift: any) => {
           const giftYear = new Date(gift.purchase_date).getFullYear();
           return giftYear === year;
         });
@@ -331,7 +331,7 @@ export function useBudgetDonutData(
         const grouped = new Map<string, number>();
         const itemsByCategory = new Map<string, Array<{ title: string; price: number }>>();
 
-        // Helper : récupérer nom du propriétaire
+        // Helper : récupérer nom du propriétaire (pour les claims in-app)
         const getOwnerName = async (claim: any): Promise<string> => {
           if (claim.items?.wishlists?.profiles?.display_name) {
             return claim.items.wishlists.profiles.display_name;
@@ -346,6 +346,60 @@ export function useBudgetDonutData(
           }
           return 'Inconnu';
         };
+
+        // ✅ Préparer les noms de destinataires pour les external_gifts (vue "person")
+        const externalRecipientNames = new Map<string, string>();
+
+        if (viewMode === 'person' && filteredExternal.length > 0) {
+          const recipientIds = Array.from(
+            new Set(
+              filteredExternal
+                .map((g: any) => g.recipient_id)
+                .filter((id: string | null) => !!id)
+            )
+          );
+
+          if (recipientIds.length > 0) {
+            // 1️⃣ d'abord dans profiles
+            const { data: profilesData, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, display_name')
+              .in('id', recipientIds);
+
+            if (profilesError) {
+              console.error('❌ Erreur profils destinataires (donut):', profilesError);
+            }
+
+            profilesData?.forEach((p: any) => {
+              if (p.display_name) {
+                externalRecipientNames.set(p.id, p.display_name);
+              }
+            });
+
+            // 2️⃣ puis dans external_recipients pour ceux qui restent
+            const remainingIds = recipientIds.filter(id => !externalRecipientNames.has(id));
+
+            if (remainingIds.length > 0) {
+              const { data: externalRecipientsData, error: externalRecipientsError } = await supabase
+                .from('external_recipients')
+                .select('id, name')
+                .in('id', remainingIds);
+
+              if (externalRecipientsError) {
+                console.error('❌ Erreur external_recipients (donut):', externalRecipientsError);
+              }
+
+              externalRecipientsData?.forEach((r: any) => {
+                externalRecipientNames.set(
+                  r.id,
+                  r.name || 'Destinataire inconnu'
+                );
+              });
+            }
+          }
+
+          console.log('✅ Noms destinataires external (donut):', externalRecipientNames);
+        }
 
         // Process claims
         for (const claim of claims) {
@@ -378,10 +432,14 @@ export function useBudgetDonutData(
           const totalPrice = gift.paid_amount || 0;
 
           let key = '';
+
           if (viewMode === 'theme' || viewMode === 'global') {
             key = gift.theme || 'autre';
           } else if (viewMode === 'person') {
-            key = 'Cadeaux hors app'; // Temporaire sans relation
+            // 🔥 Utiliser le vrai nom du destinataire si possible
+            key =
+              (gift.recipient_id && externalRecipientNames.get(gift.recipient_id)) ||
+              'Cadeaux hors app';
           } else if (viewMode === 'list') {
             key = 'Cadeaux hors app';
           }

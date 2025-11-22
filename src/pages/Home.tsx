@@ -183,7 +183,7 @@ export default function Home() {
                   },
                   {
                     icon: '✨',
-                    title: 'Simple, fluide, sécurisé',
+                    title: 'Simple, fluide, rapide',
                     desc: 'Pas de mot de passe, pas de prise de tête — juste du plaisir à offrir.',
                     gradient: 'from-pink-500 to-rose-500',
                   },
