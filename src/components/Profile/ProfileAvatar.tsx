@@ -36,7 +36,7 @@ export default function ProfileAvatar({
     <img
       src={avatarUrl}
       alt={`Avatar de ${displayName}`}
-      className={`${sizeClasses[size]} ${baseClasses}  object-cover animate-scale-in`}
+      className={`${sizeClasses[size]} ${baseClasses} border-4 border-white object-cover animate-scale-in`}
     />
   ) : (
     <div className={`${sizeClasses[size]} ${baseClasses} bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 flex items-center justify-center text-white font-bold animate-scale-in`}>
