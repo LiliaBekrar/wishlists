@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 src/components/Lists/ManageMembersModal.tsx
 
 import { useState } from 'react';
@@ -20,20 +20,20 @@ interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   wishlistId: string;
-  members: Member[];
+  members?: Member[]; // ✅ devient optionnel
   onMembersChange?: (members: Member[]) => void;
   onToast?: (toast: { type: 'success' | 'error'; message: string }) => void;
   isOwner?: boolean; // ✅ pour satisfaire les appels existants
 }
 
-
 export default function ManageMembersModal({
   isOpen,
   onClose,
   wishlistId,
-  members: initialMembers,
+  members: initialMembers = [], // ✅ default []
   onMembersChange,
   onToast,
+  isOwner, // même si non utilisé, on le garde pour le typage
 }: ManageMembersModalProps) {
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
@@ -69,13 +69,12 @@ export default function ManageMembersModal({
         return;
       }
 
-      // ✅ On force bien le retour comme Member
       const next: Member[] = members.map((m): Member =>
         m.id === memberId
           ? {
               ...m,
               approved: true,
-              status: 'actif', // typé correctement comme Member['status']
+              status: 'actif',
             }
           : m
       );

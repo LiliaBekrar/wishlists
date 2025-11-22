@@ -31,6 +31,7 @@ interface Props {
     url: string;
     image_url: string;
     price: number;
+    shipping_cost?: number | null;
     priority: 'basse' | 'moyenne' | 'haute';
     size: string;
     color: string;
@@ -78,6 +79,7 @@ export default function ListViewContent({
     url: string;
     image_url: string;
     price: number;
+    shipping_cost?: number | null;
     priority: 'basse' | 'moyenne' | 'haute';
     size: string;
     color: string;
@@ -98,6 +100,7 @@ export default function ListViewContent({
     url: string;
     image_url: string;
     price: number;
+    shipping_cost?: number | null;
     priority: 'basse' | 'moyenne' | 'haute';
     size: string;
     color: string;
