@@ -75,7 +75,7 @@ export function useItems(wishlistId: string | undefined) {
     size: string;
     color: string;
     promo_code: string;
-    shipping_cost: number | null;
+    shipping_cost?: number | null; // ✅ optionnel & nullable
   }) => {
     if (!wishlistId) throw new Error('Wishlist ID manquant');
 
@@ -95,7 +95,7 @@ export function useItems(wishlistId: string | undefined) {
           size: input.size?.trim() || null,
           color: input.color?.trim() || null,
           promo_code: input.promo_code?.trim() || null,
-          shipping_cost: input.shipping_cost ?? null, // 🆕 toujours null si vide
+          shipping_cost: input.shipping_cost ?? null, // ✅ BDD reçoit toujours number | null
           status: 'disponible',
           quantity: 1,
           position: items.length,

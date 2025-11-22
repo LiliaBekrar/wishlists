@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // 📄 src/components/Lists/ManageMembersModal.tsx
 
 import { useState } from 'react';
@@ -20,10 +19,10 @@ interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   wishlistId: string;
-  members?: Member[]; // ✅ devient optionnel
+  members?: Member[]; // ✅ optionnel
   onMembersChange?: (members: Member[]) => void;
   onToast?: (toast: { type: 'success' | 'error'; message: string }) => void;
-  isOwner?: boolean; // ✅ pour satisfaire les appels existants
+  isOwner?: boolean; // ✅ existe pour les appels, mais on ne le destructure plus
 }
 
 export default function ManageMembersModal({
@@ -33,7 +32,6 @@ export default function ManageMembersModal({
   members: initialMembers = [], // ✅ default []
   onMembersChange,
   onToast,
-  isOwner, // même si non utilisé, on le garde pour le typage
 }: ManageMembersModalProps) {
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
@@ -55,8 +53,8 @@ export default function ManageMembersModal({
       const { error } = await supabase
         .from('wishlist_members')
         .update({
-          approved: true,     // ✅ pour la policy RLS
-          status: 'actif',    // ✅ cohérent avec le reste de l’app
+          approved: true, // ✅ pour la policy RLS
+          status: 'actif', // ✅ cohérent avec le reste de l’app
         })
         .eq('id', memberId);
 
@@ -156,7 +154,6 @@ export default function ManageMembersModal({
                         {loadingMemberId === member.id ? '...' : '✅ Approuver'}
                       </button>
                     )}
-
                     {/* Bouton supprimer éventuel ici */}
                   </div>
                 </li>
