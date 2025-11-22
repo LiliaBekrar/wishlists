@@ -13,18 +13,31 @@ import type { BudgetViewMode } from '../../types/db';
 
 export default function BudgetsView() {
   const { user } = useAuth();
-  const { budgets, loading, error } = useBudget(user?.id || '');
-
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedYear, setSelectedYear] = useState(currentYear); // ⬅️ Utiliser currentYear
   const [viewMode, setViewMode] = useState<BudgetViewMode>('theme');
   const [showExternalGiftModal, setShowExternalGiftModal] = useState(false);
+
+  // ✅ PASSER selectedYear ici
+  const { budgets, loading, error, reload } = useBudget(user?.id || '', selectedYear);
 
   const { data: donutData, loading: donutLoading } = useBudgetDonutData(
     user?.id || '',
     viewMode,
     selectedYear
   );
+
+  // ✅ LOG DEBUG (à retirer après)
+  console.log('🔍 Debug BudgetsView:', {
+    userId: user?.id,
+    viewMode,
+    selectedYear,
+    currentYear,
+    donutDataLength: donutData.length,
+    donutData,
+    budgetsCount: budgets.length,
+    totalSpent: budgets.find(b => b.budgetGoal.type === 'annuel')?.spent
+  });
 
   const totalSpent = budgets.find(b =>
     b.budgetGoal.type === 'annuel' && b.budgetGoal.year === selectedYear
@@ -228,7 +241,8 @@ export default function BudgetsView() {
                     <BudgetCard
                       key={budgetData.budgetGoal.id}
                       budgetData={budgetData}
-                      onEditLimit={() => alert('Modal modifier limite à implémenter')}
+                      userId={user?.id || ''}
+                      onLimitUpdated={reload}
                     />
                   ))}
                 </div>
@@ -351,7 +365,8 @@ export default function BudgetsView() {
                     <BudgetCard
                       key={budgetData.budgetGoal.id}
                       budgetData={budgetData}
-                      onEditLimit={() => alert('Modal modifier limite à implémenter')}
+                      userId={user?.id || ''}
+                      onLimitUpdated={reload}
                     />
                   ))}
                 </div>
