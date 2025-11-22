@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/components/budget/ExternalGiftModal.tsx
-// 🧠 Rôle : Modal pour ajouter un cadeau acheté hors-app (style AddItemModal)
+// 🧠 Rôle : Modal pour ajouter/modifier un cadeau acheté hors-app
 
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { FOCUS_RING } from '../../utils/constants';
 
@@ -12,6 +11,15 @@ interface ExternalGiftModalProps {
   onClose: () => void;
   userId: string;
   onSuccess?: () => void;
+  editingGift?: {
+    id: string;
+    description: string;
+    paid_amount: number;
+    purchase_date: string;
+    theme: string | null;
+    notes?: string | null;
+    recipient_id: string;
+  } | null;
 }
 
 // Type pour les destinataires (mixte external + profiles)
@@ -22,10 +30,17 @@ interface RecipientOption {
   profileId?: string;
 }
 
-
-export function ExternalGiftModal({ isOpen, onClose, userId, onSuccess }: ExternalGiftModalProps) {
+export function ExternalGiftModal({
+  isOpen,
+  onClose,
+  userId,
+  onSuccess,
+  editingGift
+}: ExternalGiftModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isEditMode = !!editingGift;
 
   // États du formulaire
   const [recipientType, setRecipientType] = useState<'existing' | 'new'>('existing');
@@ -40,94 +55,111 @@ export function ExternalGiftModal({ isOpen, onClose, userId, onSuccess }: Extern
   // Liste des destinataires
   const [recipients, setRecipients] = useState<RecipientOption[]>([]);
 
+  // ✅ Pré-remplir le formulaire en mode édition
+  useEffect(() => {
+    if (isEditMode && editingGift) {
+      setDescription(editingGift.description || '');
+      setPaidAmount(editingGift.paid_amount.toString());
+      setPurchaseDate(editingGift.purchase_date);
+      setTheme((editingGift.theme as typeof theme) || 'autre');
+      setNotes(editingGift.notes || '');
+      setRecipientType('existing');
+    } else {
+      resetForm();
+    }
+  }, [isEditMode, editingGift]);
+
   // Charger les destinataires au montage
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && userId) {
       fetchRecipients();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, userId]);
 
-async function fetchRecipients() {
-  try {
-    // 1️⃣ External recipients
-    const { data: externalRecipients } = await supabase
-      .from('external_recipients')
-      .select('id, name, profile_id')
-      .eq('user_id', userId)
-      .order('name');
-
-    // 2️⃣ Owners des listes où l'utilisateur est membre
-    const { data: wishlistMembers } = await supabase
-      .from('wishlist_members')
-      .select(`
-        wishlists!inner(
-          owner_id,
-          profiles!wishlists_owner_id_fkey!inner(
-            id,
-            display_name
-          )
-        )
-      `)
-      .eq('user_id', userId)
-      .neq('wishlists.owner_id', userId);
-
-    console.log('🧪 wishlistMembers brute:', wishlistMembers);
-
-    const options: RecipientOption[] = [];
-
-    // External recipients purs (sans lien à un profil)
-    externalRecipients?.forEach((er: any) => {
-      if (!er.profile_id) {
-        options.push({
-          id: er.id,
-          name: er.name,
-          type: 'external',
-        });
+  // ✅ Sélectionner le destinataire en mode édition
+  useEffect(() => {
+    if (isEditMode && editingGift && recipients.length > 0) {
+      const recipient = recipients.find(r => r.id === editingGift.recipient_id);
+      if (recipient) {
+        setSelectedRecipient(recipient);
       }
-    });
+    }
+  }, [isEditMode, editingGift, recipients]);
 
-    const seenProfileIds = new Set<string>();
+  async function fetchRecipients() {
+    try {
+      // 1️⃣ External recipients
+      const { data: externalRecipients } = await supabase
+        .from('external_recipients')
+        .select('id, name, profile_id')
+        .eq('user_id', userId)
+        .order('name');
 
-    (wishlistMembers ?? []).forEach((wm: any) => {
-      // `wm.wishlists` peut être un tableau ou un objet selon la forme renvoyée
-      const wishlistsArray = Array.isArray(wm.wishlists)
-        ? wm.wishlists
-        : wm.wishlists
-        ? [wm.wishlists]
-        : [];
+      // 2️⃣ Owners des listes où l'utilisateur est membre
+      const { data: wishlistMembers } = await supabase
+        .from('wishlist_members')
+        .select(`
+          wishlists!inner(
+            owner_id,
+            profiles!wishlists_owner_id_fkey!inner(
+              id,
+              display_name
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .neq('wishlists.owner_id', userId);
 
-      wishlistsArray.forEach((w: any) => {
-        // `profiles` aussi peut être un tableau ou un objet
-        const profile =
-          Array.isArray(w.profiles) ? w.profiles[0] : w.profiles;
+      const options: RecipientOption[] = [];
 
-        if (!profile) return;
+      // External recipients purs (sans lien à un profil)
+      externalRecipients?.forEach((er: any) => {
+        if (!er.profile_id) {
+          options.push({
+            id: er.id,
+            name: er.name,
+            type: 'external',
+          });
+        }
+      });
 
-        const profileId = profile.id;
-        if (!profileId || seenProfileIds.has(profileId)) return;
-        seenProfileIds.add(profileId);
+      const seenProfileIds = new Set<string>();
 
-        const existingExternal = externalRecipients?.find(
-          (er: any) => er.profile_id === profileId
-        );
+      (wishlistMembers ?? []).forEach((wm: any) => {
+        const wishlistsArray = Array.isArray(wm.wishlists)
+          ? wm.wishlists
+          : wm.wishlists
+          ? [wm.wishlists]
+          : [];
 
-        options.push({
-          id: existingExternal?.id || `profile-${profileId}`,
-          name: profile.display_name || 'Utilisateur',
-          type: existingExternal ? 'external' : 'profile',
-          profileId,
+        wishlistsArray.forEach((w: any) => {
+          const profile = Array.isArray(w.profiles) ? w.profiles[0] : w.profiles;
+
+          if (!profile) return;
+
+          const profileId = profile.id;
+          if (!profileId || seenProfileIds.has(profileId)) return;
+          seenProfileIds.add(profileId);
+
+          const existingExternal = externalRecipients?.find(
+            (er: any) => er.profile_id === profileId
+          );
+
+          options.push({
+            id: existingExternal?.id || `profile-${profileId}`,
+            name: profile.display_name || 'Utilisateur',
+            type: existingExternal ? 'external' : 'profile',
+            profileId,
+          });
         });
       });
-    });
 
-    options.sort((a, b) => a.name.localeCompare(b.name));
-    setRecipients(options);
-  } catch (err) {
-    console.error('Erreur chargement destinataires:', err);
+      options.sort((a, b) => a.name.localeCompare(b.name));
+      setRecipients(options);
+    } catch (err) {
+      console.error('Erreur chargement destinataires:', err);
+    }
   }
-}
-
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,9 +167,76 @@ async function fetchRecipients() {
     setError(null);
 
     try {
+      // ✅ MODE ÉDITION
+      if (isEditMode && editingGift) {
+        let recipientId = editingGift.recipient_id;
+
+        // Si l'utilisateur a changé de destinataire
+        if (recipientType === 'new' && newRecipientName.trim()) {
+          const { data: newRecipient, error: recipientError } = await supabase
+            .from('external_recipients')
+            .insert({
+              user_id: userId,
+              name: newRecipientName.trim(),
+            })
+            .select()
+            .single();
+
+          if (recipientError) throw recipientError;
+          recipientId = newRecipient.id;
+        } else if (recipientType === 'existing' && selectedRecipient) {
+          if (selectedRecipient.type === 'external') {
+            recipientId = selectedRecipient.id;
+          } else if (selectedRecipient.type === 'profile') {
+            const { data: existing } = await supabase
+              .from('external_recipients')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('profile_id', selectedRecipient.profileId!)
+              .maybeSingle();
+
+            if (existing) {
+              recipientId = existing.id;
+            } else {
+              const { data: newRecipient, error: recipientError } = await supabase
+                .from('external_recipients')
+                .insert({
+                  user_id: userId,
+                  name: selectedRecipient.name,
+                  profile_id: selectedRecipient.profileId,
+                })
+                .select()
+                .single();
+
+              if (recipientError) throw recipientError;
+              recipientId = newRecipient.id;
+            }
+          }
+        }
+
+        const { error: updateError } = await supabase
+          .from('external_gifts')
+          .update({
+            recipient_id: recipientId,
+            description: description.trim() || null,
+            paid_amount: parseFloat(paidAmount),
+            purchase_date: purchaseDate,
+            theme,
+            notes: notes.trim() || null,
+          })
+          .eq('id', editingGift.id);
+
+        if (updateError) throw updateError;
+
+        resetForm();
+        onSuccess?.();
+        onClose();
+        return;
+      }
+
+      // ✅ MODE CRÉATION
       let recipientId: string | null = null;
 
-      // 1️⃣ Gérer le destinataire
       if (recipientType === 'new' && newRecipientName.trim()) {
         const { data: newRecipient, error: recipientError } = await supabase
           .from('external_recipients')
@@ -184,7 +283,6 @@ async function fetchRecipients() {
         throw new Error('Veuillez sélectionner ou créer un destinataire');
       }
 
-      // 2️⃣ Créer le cadeau
       const { error: giftError } = await supabase.from('external_gifts').insert({
         user_id: userId,
         recipient_id: recipientId,
@@ -197,12 +295,11 @@ async function fetchRecipients() {
 
       if (giftError) throw giftError;
 
-      // 3️⃣ Succès
       resetForm();
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      console.error('Erreur ajout cadeau hors-app:', err);
+      console.error('Erreur ajout/modification cadeau hors-app:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -252,10 +349,10 @@ async function fetchRecipients() {
           </button>
 
           <h2 id="modal-title" className="text-2xl font-bold">
-            🛍️ Ajouter un cadeau hors-app
+            {isEditMode ? '✏️ Modifier le cadeau' : '🛍️ Ajouter un cadeau hors-app'}
           </h2>
           <p className="text-sm opacity-90 mt-1">
-            Ajoute un cadeau acheté en dehors de WishLists
+            {isEditMode ? 'Modifie les informations du cadeau' : 'Ajoute un cadeau acheté en dehors de WishLists'}
           </p>
         </div>
 
@@ -333,7 +430,6 @@ async function fetchRecipients() {
                   ))}
                 </select>
 
-                {/* Chevron custom à droite */}
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg
                     className="w-4 h-4 text-gray-400"
@@ -350,7 +446,6 @@ async function fetchRecipients() {
                 </span>
               </div>
             ) : (
-
               <input
                 type="text"
                 value={newRecipientName}
@@ -390,7 +485,6 @@ async function fetchRecipients() {
 
           {/* Montant + Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Montant */}
             <div>
               <label htmlFor="gift-amount" className="block text-sm font-semibold text-gray-700 mb-2">
                 💰 Montant payé * <span className="text-red-600">(obligatoire)</span>
@@ -414,7 +508,6 @@ async function fetchRecipients() {
               </div>
             </div>
 
-            {/* Date */}
             <div>
               <label htmlFor="gift-date" className="block text-sm font-semibold text-gray-700 mb-2">
                 📅 Date d'achat *
@@ -503,10 +596,10 @@ async function fetchRecipients() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Ajout en cours...
+                  {isEditMode ? 'Modification...' : 'Ajout en cours...'}
                 </span>
               ) : (
-                '✨ Ajouter le cadeau'
+                isEditMode ? '✅ Enregistrer' : '✨ Ajouter le cadeau'
               )}
             </button>
           </div>

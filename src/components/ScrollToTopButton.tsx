@@ -1,6 +1,5 @@
 // 📄 src/components/ScrollToTopButton.tsx
 // 🧠 Rôle : Bouton floating pour remonter en haut de page avec indicateur de progression
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { useState, useEffect } from 'react';
 import { FOCUS_RING } from '../utils/constants';

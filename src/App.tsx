@@ -13,7 +13,7 @@ import Privacy from './pages/Privacy';
 import ProfilePrivate from './pages/ProfilePrivate';
 import ProfilePublic from './pages/ProfilePublic';
 import ScrollToTopButton from './components/ScrollToTopButton';
-// import BudgetDetailView from './pages/BudgetDetailView';
+import BudgetDetailPage from './pages/BudgetDetailPage';
 // import RecipientsManagement from './pages/RecipientsManagement';
 
 // ⬅️ Détecter l'environnement pour le basename
@@ -48,6 +48,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePrivate /></ProtectedRoute>} />
             <Route path="/profile/:username" element={<ProfilePublic />} />
+            <Route path="/budgets/:year/:type" element={<BudgetDetailPage />} />
             <Route
               path="/dashboard"
               element={

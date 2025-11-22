@@ -1,6 +1,5 @@
 // 📄 src/components/UserLink.tsx
 // 🧠 Rôle : Composant réutilisable pour afficher un utilisateur avec lien vers son profil
-// 🛠️ Auteur : Claude IA pour WishLists v7
 
 import { Link } from 'react-router-dom';
 import ProfileAvatar from './Profile/ProfileAvatar';
