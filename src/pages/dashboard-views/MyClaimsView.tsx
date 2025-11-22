@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/dashboard-views/MyClaimsView.tsx
 // 🧠 Vue "Mes réservations" + section "Cadeaux hors app"
 
@@ -39,7 +40,7 @@ interface ExternalGift {
   paid_amount: number;
   purchase_date: string;
   theme: string | null;
-  recipient_name: string | null;
+  recipient_id: string;
 }
 
 interface MyClaimsViewProps {
@@ -53,10 +54,14 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [loadingListId, setLoadingListId] = useState<string | null>(null);
 
-  // ✅ État pour les cadeaux hors app
+  // ✅ États pour les cadeaux hors app
   const [externalGifts, setExternalGifts] = useState<ExternalGift[]>([]);
   const [loadingExternal, setLoadingExternal] = useState(true);
   const [deletingGiftId, setDeletingGiftId] = useState<string | null>(null);
+  const [editingGift, setEditingGift] = useState<ExternalGift | null>(null);
+
+  // ✅ Map pour stocker les noms des destinataires
+  const [recipientNames, setRecipientNames] = useState<Map<string, string>>(new Map());
 
   // ✅ Charger les cadeaux hors app
   useEffect(() => {
@@ -65,6 +70,8 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
     async function fetchExternalGifts() {
       try {
         setLoadingExternal(true);
+
+        // 1️⃣ Récupérer les cadeaux
         const { data, error } = await supabase
           .from('external_gifts')
           .select('*')
@@ -72,7 +79,44 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
           .order('purchase_date', { ascending: false });
 
         if (error) throw error;
+
+        console.log('✅ External gifts récupérés:', data);
         setExternalGifts(data || []);
+
+        // 2️⃣ Récupérer les noms des destinataires
+        if (data && data.length > 0) {
+          const recipientIds = [...new Set(data.map(g => g.recipient_id))];
+          const namesMap = new Map<string, string>();
+
+          // Pour chaque recipient_id, vérifier s'il existe dans profiles OU external_recipients
+          for (const recipientId of recipientIds) {
+            // a) D'abord chercher dans profiles (utilisateur de l'app)
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('display_name')
+              .eq('id', recipientId)
+              .maybeSingle();
+
+            if (profile?.display_name) {
+              namesMap.set(recipientId, profile.display_name);
+            } else {
+              // b) Sinon chercher dans external_recipients
+              const { data: externalRecipient } = await supabase
+                .from('external_recipients')
+                .select('name')
+                .eq('id', recipientId)
+                .maybeSingle();
+
+              namesMap.set(
+                recipientId,
+                externalRecipient?.name || 'Destinataire inconnu'
+              );
+            }
+          }
+
+  setRecipientNames(namesMap);
+  console.log('✅ Noms destinataires chargés:', namesMap);
+}
       } catch (err) {
         console.error('❌ Erreur fetch external_gifts:', err);
       } finally {
@@ -142,6 +186,11 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
     } finally {
       setLoadingListId(null);
     }
+  };
+
+  // ✅ Récupérer le nom du destinataire
+  const getRecipientName = (gift: ExternalGift): string => {
+    return recipientNames.get(gift.recipient_id) || 'Destinataire inconnu';
   };
 
   const hasInAppClaims = claims.length > 0;
@@ -388,7 +437,7 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
                     key={gift.id}
                     className="group relative bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
                   >
-                    {/* ✅ Header avec emoji + thème (fond blanc) */}
+                    {/* ✅ Header avec emoji + thème */}
                     <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-200/50">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{themeEmoji}</span>
@@ -397,44 +446,63 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
                         </span>
                       </div>
 
-                      {/* Bouton supprimer */}
-                      <button
-                        onClick={() => handleDeleteExternalGift(gift.id)}
-                        disabled={deletingGiftId === gift.id}
-                        className={`
-                          p-1.5 rounded-lg
-                          bg-red-100 hover:bg-red-200
-                          text-red-600 hover:text-red-700
-                          transition-all
-                          disabled:opacity-50 disabled:cursor-not-allowed
-                          ${FOCUS_RING}
-                        `}
-                        aria-label="Supprimer"
-                        title="Supprimer ce cadeau"
-                      >
-                        {deletingGiftId === gift.id ? (
-                          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              fill="none"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                            />
-                          </svg>
-                        ) : (
+                      {/* ✅ Boutons Modifier + Supprimer */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingGift(gift)}
+                          className={`
+                            p-1.5 rounded-lg
+                            bg-blue-100 hover:bg-blue-200
+                            text-blue-600 hover:text-blue-700
+                            transition-all
+                            ${FOCUS_RING}
+                          `}
+                          aria-label="Modifier"
+                          title="Modifier ce cadeau"
+                        >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                        )}
-                      </button>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteExternalGift(gift.id)}
+                          disabled={deletingGiftId === gift.id}
+                          className={`
+                            p-1.5 rounded-lg
+                            bg-red-100 hover:bg-red-200
+                            text-red-600 hover:text-red-700
+                            transition-all
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            ${FOCUS_RING}
+                          `}
+                          aria-label="Supprimer"
+                          title="Supprimer ce cadeau"
+                        >
+                          {deletingGiftId === gift.id ? (
+                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                                fill="none"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {/* ✅ Contenu */}
@@ -444,7 +512,7 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
                         {gift.description || 'Cadeau sans titre'}
                       </h3>
 
-                      {/* Destinataire (obligatoire) */}
+                      {/* Destinataire */}
                       <div className="flex items-start gap-2 mb-3 p-2 bg-purple-50 rounded-lg">
                         <svg className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -452,7 +520,7 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-gray-600 mb-0.5">Pour</p>
                           <p className="text-sm font-bold text-gray-900 truncate">
-                            {gift.recipient_name || 'Destinataire inconnu'}
+                            {getRecipientName(gift)}
                           </p>
                         </div>
                       </div>
@@ -491,6 +559,29 @@ export default function MyClaimsView({ claims, onRefresh }: MyClaimsViewProps) {
           type={toast.type}
           onClose={() => setToast(null)}
         />
+      )}
+
+      {/* ✅ TODO: Implémenter ExternalGiftModal en mode édition */}
+      {editingGift && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">🚧 Modifier le cadeau</h3>
+            <p className="text-gray-600 mb-4">
+              Fonctionnalité en cours de développement... (on va l'implémenter juste après !)
+            </p>
+            <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg mb-4">
+              <strong>Cadeau :</strong> {editingGift.description}<br/>
+              <strong>Montant :</strong> {formatPrice(editingGift.paid_amount)}<br/>
+              <strong>Destinataire :</strong> {getRecipientName(editingGift)}
+            </p>
+            <button
+              onClick={() => setEditingGift(null)}
+              className={`w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium ${FOCUS_RING}`}
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

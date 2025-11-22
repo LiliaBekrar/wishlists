@@ -22,22 +22,6 @@ interface RecipientOption {
   profileId?: string;
 }
 
-// Types pour les rows Supabase utilisés dans fetchRecipients
-// type ExternalRecipientRow = {
-//   id: string;
-//   name: string;
-//   profile_id: string | null;
-// };
-
-// type WishlistMemberWithOwnerProfile = {
-//   wishlists: {
-//     owner_id: string;
-//     profiles: {
-//       id: string;
-//       display_name: string | null;
-//     }[];
-//   }[];
-// };
 
 export function ExternalGiftModal({ isOpen, onClose, userId, onSuccess }: ExternalGiftModalProps) {
   const [loading, setLoading] = useState(false);
