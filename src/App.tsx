@@ -12,6 +12,7 @@ import AuthCallback from './pages/AuthCallback';
 import Privacy from './pages/Privacy';
 import ProfilePrivate from './pages/ProfilePrivate';
 import ProfilePublic from './pages/ProfilePublic';
+import ScrollToTopButton from './components/ScrollToTopButton';
 // import BudgetDetailView from './pages/BudgetDetailView';
 // import RecipientsManagement from './pages/RecipientsManagement';
 
@@ -60,6 +61,7 @@ export default function App() {
         </main>
         <Footer />
       </div>
+      <ScrollToTopButton />
     </BrowserRouter>
   );
 }

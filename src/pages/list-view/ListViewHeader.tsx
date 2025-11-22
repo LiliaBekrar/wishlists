@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/pages/list-view/ListViewHeader.tsx
-// 🧠 Rôle : Header avec bannière, titre et boutons (+ gérer membres + quitter)
+// 🧠 Rôle : Header avec bannière, titre, owner info et boutons
 
 import { BANNER_HEIGHT } from '../../utils/constants';
 import type { Wishlist } from '../../hooks/useWishlists';
+import { useProfile } from '../../hooks/useProfile';
+import UserLink from '../../components/UserLink';
 
 interface Props {
   wishlist: Wishlist;
@@ -26,20 +28,39 @@ export default function ListViewHeader({
   onLeaveList,
   BannerComponent,
 }: Props) {
+  const { profile: ownerProfile, loading: ownerLoading } = useProfile(wishlist.owner_id);
+
   return (
     <div className="relative overflow-hidden">
       <BannerComponent height={BANNER_HEIGHT.medium} />
 
-      {/* Titre centré */}
-      <div className="absolute inset-0 flex items-center justify-center px-4">
+      {/* Titre centré + owner info */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-4 gap-3">
         <div className="text-center text-white max-w-3xl">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 drop-shadow-lg">
             {wishlist.name}
           </h1>
           {wishlist.description && (
-            <p className="text-base sm:text-lg opacity-95 drop-shadow">
+            <p className="text-base sm:text-lg opacity-95 drop-shadow mb-3">
               {wishlist.description}
             </p>
+          )}
+
+          {/* 🆕 Badge owner avec meilleure visibilité */}
+          {!ownerLoading && ownerProfile && ownerProfile.username && (
+            <div className="flex items-center justify-center gap-2.5 mt-3 px-5 py-1 bg-white/90 backdrop-blur-lg rounded-full inline-flex shadow-2xl border border-white/50">
+              <span className="text-md text-gray-700 font-semibold">
+                Créée par
+              </span>
+              <UserLink
+                username={ownerProfile.username}
+                displayName={ownerProfile.display_name || ownerProfile.username}
+                avatarUrl={ownerProfile.avatar_url}
+                size="sm"
+                showName={true}
+                variant="default" // 🆕 Texte foncé sur fond blanc
+              />
+            </div>
           )}
         </div>
       </div>
@@ -54,8 +75,7 @@ export default function ListViewHeader({
       </div>
 
       {/* Boutons en haut à gauche */}
-      <div className="absolute top-4 left-4 flex items-center gap-2">
-        {/* Bouton retour */}
+      <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
         <button
           onClick={onBack}
           className="p-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-110"
@@ -66,7 +86,6 @@ export default function ListViewHeader({
           </svg>
         </button>
 
-        {/* Bouton partager */}
         <button
           onClick={onShare}
           className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur rounded-full shadow-lg transition-all hover:scale-105 font-semibold text-gray-700"
@@ -83,7 +102,6 @@ export default function ListViewHeader({
           <span className="hidden sm:inline">Partager</span>
         </button>
 
-        {/* Bouton gérer membres (owner uniquement) */}
         {isOwner && (
           <button
             onClick={onManageMembers}
@@ -102,7 +120,6 @@ export default function ListViewHeader({
           </button>
         )}
 
-        {/* Bouton quitter (membre non-owner uniquement) */}
         {!isOwner && isMember && (
           <button
             onClick={onLeaveList}

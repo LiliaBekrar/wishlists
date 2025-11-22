@@ -44,7 +44,7 @@ export const BANNER_HEIGHT = {
   small: 200,      // ⬅️ Petite bannière (cards)
   medium: 300,     // ⬅️ Moyenne (pages listes)
   large: 350,      // ⬅️ Grande (home, profils publics)
-  xlarge: 400      // ⬅️ Très grande (landing pages spéciales)
+  xlarge: 500      // ⬅️ Très grande (landing pages spéciales)
 } as const;
 
 export const BANNER_DEFAULT_HEIGHT = BANNER_HEIGHT.medium; // ⬅️ Hauteur par défaut
