@@ -173,11 +173,17 @@ useEffect(() => {
               slug,
               theme,
               description,
-              owner_id
+              owner_id,
+              profiles:owner_id (
+                username,
+                display_name,
+                avatar_url
+              )
             )
           `)
           .eq('user_id', user.id)
           .eq('status', 'actif');
+
 
         if (memberListsError) {
           console.error('❌ Erreur chargement listes membres:', memberListsError);
@@ -195,8 +201,16 @@ useEffect(() => {
               slug: member.wishlists.slug,
               theme: member.wishlists.theme,
               description: member.wishlists.description,
+              owner: member.wishlists.profiles
+                ? {
+                    username: member.wishlists.profiles.username,
+                    display_name: member.wishlists.profiles.display_name,
+                    avatar_url: member.wishlists.profiles.avatar_url,
+                  }
+                : undefined,
             },
           }));
+
 
           setMemberWishlists(formatted);
           console.log('✅ Listes membres formatées:', formatted.length, formatted);
