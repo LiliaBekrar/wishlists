@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/hooks/useBudget.ts
 // 🧠 Rôle : Budgets automatiques avec limites depuis budget_goals
-// 🇫🇷 100% français + shipping_cost inclus + prise en compte de paid_amount
+// 🇫🇷 100% français + shipping_cost inclus
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -122,7 +122,7 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
 
       console.log('✅ External gifts récupérés (useBudget):', externalGifts);
 
-      // ✅ 3. Filtrer par année + calculer total_price (paid_amount si présent)
+      // ✅ 3. Filtrer par année + calculer total_price
       const yearClaims = (claims || [])
         .filter(claim => {
           const claimYear = new Date(claim.created_at).getFullYear();
@@ -131,21 +131,16 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
         .map(claim => {
           const item = claim.items;
           const wishlist = item?.wishlists;
-
-          const announcedPrice = item?.price || 0;
+          const price = item?.price || 0;
           const shipping = item?.shipping_cost || 0;
-          const paidAmount = claim.paid_amount as number | null;
 
-          const hasPaidAmount = paidAmount !== null && paidAmount !== undefined;
-
-          const total_price = hasPaidAmount
-            ? paidAmount
-            : announcedPrice + shipping;
+          const effectiveTotal =
+            claim.paid_amount != null ? claim.paid_amount : price + shipping;
 
           return {
             id: claim.id,
             title: item?.title || 'Sans titre',
-            total_price,
+            total_price: effectiveTotal,
             theme: wishlist?.theme || item?.original_theme || null,
             recipient_name: wishlist?.profiles?.display_name || 'Inconnu',
             claim_date: claim.created_at
@@ -162,7 +157,7 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
           title: gift.description || 'Cadeau hors app',
           total_price: gift.paid_amount || 0,
           theme: gift.theme || null,
-          recipient_name: 'Hors app', // Temporaire, on récupérera le vrai nom plus tard
+          recipient_name: 'Hors app',
           claim_date: gift.purchase_date
         }));
 
@@ -252,7 +247,7 @@ export function useBudgetDonutData(
     value: number;
     percentage: number;
     color: string;
-    items?: Array<{ title: string; price: number }>;
+    items?: Array<{ title: string; price: number; recipient_name?: string }>;
   }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -266,7 +261,7 @@ export function useBudgetDonutData(
       try {
         setLoading(true);
 
-        // ✅ Claims (AVEC paid_amount)
+        // ✅ Claims
         const { data: claimsRaw, error: claimsError } = await supabase
           .from('claims')
           .select(`
@@ -308,7 +303,7 @@ export function useBudgetDonutData(
 
         console.log(`✅ Claims filtrés pour ${year}:`, claims.length);
 
-        // ✅ External gifts (SANS relation pour éviter l'erreur)
+        // ✅ External gifts
         const { data: externalGiftsRaw, error: giftsError } = await supabase
           .from('external_gifts')
           .select('*')
@@ -316,35 +311,25 @@ export function useBudgetDonutData(
 
         if (giftsError) {
           console.error('❌ Erreur external_gifts:', giftsError);
-          // ⬅️ NE PAS throw, continuer sans les external gifts
           console.warn('⚠️ Continuation sans external_gifts');
         }
 
         const externalGifts = externalGiftsRaw || [];
-
-        console.log('✅ External gifts récupérés:', externalGifts.length);
 
         const filteredExternal = externalGifts.filter((gift: any) => {
           const giftYear = new Date(gift.purchase_date).getFullYear();
           return giftYear === year;
         });
 
-        console.log('🔍 Debug useBudgetDonutData:', {
-          viewMode,
-          year,
-          claimsCount: claims.length,
-          externalCount: filteredExternal.length,
-          totalGifts: claims.length + filteredExternal.length
-        });
-
         // ✅ Agréger selon viewMode
         const grouped = new Map<string, number>();
-        const itemsByCategory = new Map<string, Array<{ title: string; price: number }>>();
+        const itemsByCategory = new Map<string, Array<{ title: string; price: number; recipient_name?: string }>>();
+        const labels = new Map<string, string>(); // label lisible
 
         // Helper : récupérer nom du propriétaire (pour les claims in-app)
         const getOwnerName = async (claim: any): Promise<string> => {
           if (claim.items?.wishlists?.profiles?.display_name) {
-            return claim.items.wishlists.profiles.display_name;
+            return claim.items.wishlists.profiles.display_name as string;
           }
           if (claim.items?.original_owner_id) {
             const { data } = await supabase
@@ -352,7 +337,7 @@ export function useBudgetDonutData(
               .select('display_name')
               .eq('id', claim.items.original_owner_id)
               .single();
-            if (data?.display_name) return data.display_name;
+            if (data?.display_name) return data.display_name as string;
           }
           return 'Inconnu';
         };
@@ -370,116 +355,124 @@ export function useBudgetDonutData(
           );
 
           if (recipientIds.length > 0) {
-            // 1️⃣ d'abord dans profiles
-            const { data: profilesData, error: profilesError } = await supabase
+            // 1️⃣ profils
+            const { data: profilesData } = await supabase
               .from('profiles')
               .select('id, display_name')
               .in('id', recipientIds);
 
-            if (profilesError) {
-              console.error('❌ Erreur profils destinataires (donut):', profilesError);
-            }
-
             profilesData?.forEach((p: any) => {
               if (p.display_name) {
-                externalRecipientNames.set(p.id, p.display_name);
+                externalRecipientNames.set(p.id, p.display_name as string);
               }
             });
 
-            // 2️⃣ puis dans external_recipients pour ceux qui restent
+            // 2️⃣ external_recipients
             const remainingIds = recipientIds.filter(id => !externalRecipientNames.has(id));
 
             if (remainingIds.length > 0) {
-              const { data: externalRecipientsData, error: externalRecipientsError } = await supabase
+              const { data: externalRecipientsData } = await supabase
                 .from('external_recipients')
                 .select('id, name')
                 .in('id', remainingIds);
 
-              if (externalRecipientsError) {
-                console.error('❌ Erreur external_recipients (donut):', externalRecipientsError);
-              }
-
               externalRecipientsData?.forEach((r: any) => {
-                externalRecipientNames.set(
-                  r.id,
-                  r.name || 'Destinataire inconnu'
-                );
+                if (r.name) {
+                  externalRecipientNames.set(r.id, r.name as string);
+                }
               });
             }
           }
-
-          console.log('✅ Noms destinataires external (donut):', externalRecipientNames);
         }
 
-        // ✅ Process claims (avec paid_amount si dispo)
+        // 🔁 Claims
         for (const claim of claims) {
           const item = claim.items;
           const wishlist = item?.wishlists;
-
+          const ownerName = wishlist?.profiles?.display_name as string | undefined;
           const announcedPrice = item?.price || 0;
           const shipping = item?.shipping_cost || 0;
-          const paidAmount = claim.paid_amount as number | null;
-          const hasPaidAmount = paidAmount !== null && paidAmount !== undefined;
+          const totalPrice =
+            claim.paid_amount != null ? claim.paid_amount : announcedPrice + shipping;
 
-          const totalPrice = hasPaidAmount
-            ? paidAmount
-            : announcedPrice + shipping;
+          let key: string = '';
+          let label: string = '';
 
-          let key = '';
           if (viewMode === 'theme' || viewMode === 'global') {
-            key = wishlist?.theme || item?.original_theme || 'autre';
+            const theme = (wishlist?.theme || item?.original_theme || 'autre') as string;
+            key = theme;
+            label = theme;
           } else if (viewMode === 'person') {
-            key = await getOwnerName(claim);
+            const name = await getOwnerName(claim);
+            key = name;
+            label = name;
           } else if (viewMode === 'list') {
-            key = wishlist?.name || 'Hors liste';
+            if (wishlist?.id) {
+              key = `list-${wishlist.id}`;
+              label = ownerName
+                ? `${wishlist.name} · de ${ownerName}`
+                : (wishlist.name as string) || 'Hors liste';
+            } else {
+              key = 'list-hors-liste';
+              label = 'Hors liste';
+            }
           }
 
           grouped.set(key, (grouped.get(key) || 0) + totalPrice);
+          labels.set(key, label);
 
           if (!itemsByCategory.has(key)) {
             itemsByCategory.set(key, []);
           }
-          itemsByCategory.get(key)?.push({
+          itemsByCategory.get(key)!.push({
             title: item?.title || 'Sans titre',
-            price: totalPrice
+            price: totalPrice,
+            recipient_name: ownerName
           });
         }
 
-        // ✅ Process external gifts (paid_amount déjà réel)
-        filteredExternal.forEach((gift: any) => {
+        // 🔁 External gifts
+        for (const gift of filteredExternal as any[]) {
           const totalPrice = gift.paid_amount || 0;
 
-          let key = '';
+          let key: string = '';
+          let label: string = '';
+          let recipientName: string | undefined;
 
           if (viewMode === 'theme' || viewMode === 'global') {
-            key = gift.theme || 'autre';
+            const theme = (gift.theme || 'autre') as string;
+            key = theme;
+            label = theme;
           } else if (viewMode === 'person') {
-            // 🔥 Utiliser le vrai nom du destinataire si possible
-            key =
-              (gift.recipient_id && externalRecipientNames.get(gift.recipient_id)) ||
-              'Cadeaux hors app';
+            const lookedUp = gift.recipient_id
+              ? externalRecipientNames.get(gift.recipient_id as string)
+              : undefined;
+            const effectiveName = lookedUp || 'Cadeaux hors app';
+            recipientName = lookedUp;
+            key = effectiveName;
+            label = effectiveName;
           } else if (viewMode === 'list') {
-            key = 'Cadeaux hors app';
+            key = 'external-gifts';
+            label = 'Cadeaux hors app';
           }
 
           grouped.set(key, (grouped.get(key) || 0) + totalPrice);
+          labels.set(key, label);
 
           if (!itemsByCategory.has(key)) {
             itemsByCategory.set(key, []);
           }
-          itemsByCategory.get(key)?.push({
+          itemsByCategory.get(key)!.push({
             title: gift.description || 'Cadeau hors app',
-            price: totalPrice
+            price: totalPrice,
+            recipient_name: recipientName
           });
-        });
+        }
 
-        // ✅ Convertir en format donut
-        const total = Array.from(grouped.values()).reduce((sum, val) => sum + val, 0);
-
-        console.log(`💰 Total calculé: ${total}€`);
+        // ✅ Conversion en données donut
+        const total = Array.from(grouped.values()).reduce((sum, v) => sum + v, 0);
 
         if (total === 0) {
-          console.warn('⚠️ Total = 0, pas de données pour le donut');
           setData([]);
           setLoading(false);
           return;
@@ -491,22 +484,18 @@ export function useBudgetDonutData(
         ];
 
         const result = Array.from(grouped.entries())
-          .map(([name, value], index) => ({
-            name,
+          .map(([key, value], index) => ({
+            name: labels.get(key) || key,
             value: Math.round(value * 100) / 100,
             percentage: Math.round((value / total) * 100),
             color: COLORS[index % COLORS.length],
-            items: itemsByCategory.get(name) || []
+            items: itemsByCategory.get(key) || []
           }))
           .sort((a, b) => b.value - a.value);
 
-        console.log('✅ Donut data final:', result);
         setData(result);
-
       } catch (err: any) {
         console.error('❌ Erreur useBudgetDonutData:', err);
-        console.error('Stack:', err.stack);
-        // ⬅️ NE PAS bloquer, retourner tableau vide
         setData([]);
       } finally {
         setLoading(false);

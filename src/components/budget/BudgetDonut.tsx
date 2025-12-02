@@ -17,7 +17,7 @@ interface DonutDataItem {
   value: number;
   percentage: number;
   color: string;
-  items?: Array<{ title: string; price: number }>;
+  items?: Array<{ title: string; price: number; recipient_name?: string }>;
   [key: string]: any;
 }
 
@@ -186,7 +186,14 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
                       className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-medium leading-tight break-words">{gift.title}</p>
+                        <p className="text-gray-900 font-medium leading-tight break-words">
+                          {gift.title}
+                        </p>
+                        {gift.recipient_name && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Pour {gift.recipient_name}
+                          </p>
+                        )}
                       </div>
                       <span
                         className="font-bold text-lg whitespace-nowrap flex-shrink-0"
@@ -312,7 +319,9 @@ export function BudgetDonut({ data, viewMode, onViewModeChange, totalSpent }: Bu
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Total */}
         <div className="text-center mb-6 sm:mb-8 p-4 sm:p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl border-2 border-purple-200/50">
-          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1 sm:mb-2 uppercase tracking-wide">Total dépensé</p>
+          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1 sm:mb-2 uppercase tracking-wide">
+            Total dépensé
+          </p>
           <p className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
             {formatPrice(totalSpent)}
           </p>
