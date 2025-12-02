@@ -11,6 +11,7 @@ export interface BudgetGift {
   title: string;
   recipient_name: string;
   recipient_id: string;
+  recipient_username?: string | null;
   announced_price: number;
   paid_amount: number | null;
   shipping_cost: number;
@@ -27,6 +28,7 @@ export interface BudgetGift {
 export interface RecipientGroup {
   recipient_id: string;
   recipient_name: string;
+  recipient_username?: string | null;
   total_spent: number;
   gift_count: number;
   gifts: BudgetGift[];
@@ -99,7 +101,8 @@ export function useBudgetDetail(userId: string, year: number, budgetType: Budget
                 owner_id,
                 profiles!wishlists_owner_id_fkey (
                   id,
-                  display_name
+                  display_name,
+                  username
                 )
               )
             )
@@ -139,19 +142,23 @@ export function useBudgetDetail(userId: string, year: number, budgetType: Budget
         const inAppGifts: BudgetGift[] = filteredClaims.map((claim: any) => {
           const item = claim.items;
           const wishlist = item?.wishlists;
+          const profile = wishlist?.profiles;
+
           const announcedPrice = item?.price || 0;
           const shipping = item?.shipping_cost || 0;
           const paidAmount = claim.paid_amount;
 
-          const totalPrice = paidAmount !== null && paidAmount !== undefined
-            ? paidAmount
-            : announcedPrice + shipping;
+          const totalPrice =
+            paidAmount !== null && paidAmount !== undefined
+              ? paidAmount
+              : announcedPrice + shipping;
 
           return {
             id: claim.id,
             title: item?.title || 'Sans titre',
-            recipient_name: wishlist?.profiles?.display_name || 'Inconnu',
+            recipient_name: profile?.display_name || 'Inconnu',
             recipient_id: wishlist?.owner_id || '',
+            recipient_username: profile?.username || null,
             announced_price: announcedPrice,
             paid_amount: paidAmount,
             shipping_cost: shipping,
@@ -164,14 +171,27 @@ export function useBudgetDetail(userId: string, year: number, budgetType: Budget
           };
         });
 
-        // 5️⃣ Formater les cadeaux externes
-        const recipientIds = [...new Set(filteredExternal.map((g: any) => g.recipient_id).filter(Boolean))];
-        const namesMap = new Map<string, string>();
+        // 5️⃣ Formater les cadeaux externes (avec info nom + username si profil)
+        const recipientIds = [
+          ...new Set(
+            filteredExternal
+              .map((g: any) => g.recipient_id)
+              .filter((id: string | null) => !!id)
+          )
+        ];
+
+        const namesMap = new Map<
+          string,
+          {
+            name: string;
+            username: string | null;
+          }
+        >();
 
         if (recipientIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, display_name')
+            .select('id, display_name, username')
             .in('id', recipientIds);
 
           const { data: externalRecipients } = await supabase
@@ -180,26 +200,35 @@ export function useBudgetDetail(userId: string, year: number, budgetType: Budget
             .in('id', recipientIds);
 
           recipientIds.forEach(id => {
-            const profile = profiles?.find(p => p.id === id);
-            const external = externalRecipients?.find(e => e.id === id);
-            namesMap.set(id, profile?.display_name || external?.name || 'Inconnu');
+            const profile = profiles?.find((p: any) => p.id === id);
+            const external = externalRecipients?.find((e: any) => e.id === id);
+
+            namesMap.set(id, {
+              name: profile?.display_name || external?.name || 'Inconnu',
+              username: profile?.username || null
+            });
           });
         }
 
-        const externalGiftsList: BudgetGift[] = filteredExternal.map((gift: any) => ({
-          id: gift.id,
-          title: gift.description || 'Cadeau hors app',
-          recipient_name: namesMap.get(gift.recipient_id) || 'Inconnu',
-          recipient_id: gift.recipient_id,
-          announced_price: gift.paid_amount || 0,
-          paid_amount: gift.paid_amount || 0,
-          shipping_cost: 0,
-          total_price: gift.paid_amount || 0,
-          date: gift.purchase_date,
-          source: 'external',
-          theme: gift.theme,
-          external_gift_data: gift,
-        }));
+        const externalGiftsList: BudgetGift[] = filteredExternal.map((gift: any) => {
+          const info = gift.recipient_id ? namesMap.get(gift.recipient_id) : undefined;
+
+          return {
+            id: gift.id,
+            title: gift.description || 'Cadeau hors app',
+            recipient_name: info?.name || 'Inconnu',
+            recipient_id: gift.recipient_id,
+            recipient_username: info?.username || null,
+            announced_price: gift.paid_amount || 0,
+            paid_amount: gift.paid_amount || 0,
+            shipping_cost: 0,
+            total_price: gift.paid_amount || 0,
+            date: gift.purchase_date,
+            source: 'external',
+            theme: gift.theme,
+            external_gift_data: gift,
+          };
+        });
 
         // 6️⃣ Combiner et trier
         const allGifts = [...inAppGifts, ...externalGiftsList].sort(
@@ -211,10 +240,12 @@ export function useBudgetDetail(userId: string, year: number, budgetType: Budget
 
         allGifts.forEach(gift => {
           const key = gift.recipient_id || 'unknown';
+
           if (!groupsMap.has(key)) {
             groupsMap.set(key, {
               recipient_id: key,
               recipient_name: gift.recipient_name,
+              recipient_username: gift.recipient_username ?? null,
               total_spent: 0,
               gift_count: 0,
               gifts: [],

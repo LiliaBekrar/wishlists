@@ -1,13 +1,15 @@
 // 📄 src/components/budget-detail/BudgetDetailRecipients.tsx
-// 🧠 Section destinataires avec bouton gérer
+// 🧠 Section destinataires avec navigation vers profil via USERNAME
 
 import { useNavigate } from 'react-router-dom';
 import { FOCUS_RING } from '../../utils/constants';
 import { formatPrice } from '../../utils/format';
 
+// 🔥 Ajouter recipient_username ici
 export interface RecipientGroup {
   recipient_id: string;
   recipient_name: string;
+  recipient_username?: string | null;
   total_spent: number;
   gift_count: number;
 }
@@ -17,10 +19,18 @@ interface BudgetDetailRecipientsProps {
   onRecipientClick: () => void;
 }
 
-export function BudgetDetailRecipients({ recipientGroups, onRecipientClick }: BudgetDetailRecipientsProps) {
+export function BudgetDetailRecipients({
+  recipientGroups,
+  onRecipientClick
+}: BudgetDetailRecipientsProps) {
   const navigate = useNavigate();
 
   if (recipientGroups.length === 0) return null;
+
+  // 🔥 Un destinataire interne est celui avec un vrai username
+  function isInternalRecipient(username?: string | null) {
+    return Boolean(username && username.trim().length > 0);
+  }
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-2xl p-6">
@@ -29,6 +39,7 @@ export function BudgetDetailRecipients({ recipientGroups, onRecipientClick }: Bu
           <span className="text-2xl">👥</span>
           Destinataires de ce budget ({recipientGroups.length})
         </h2>
+
         <button
           onClick={() => navigate('/recipients')}
           className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg transition-all hover:scale-105 ${FOCUS_RING}`}
@@ -42,30 +53,56 @@ export function BudgetDetailRecipients({ recipientGroups, onRecipientClick }: Bu
             />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
+
           <span className="hidden sm:inline">Gérer</span>
           <span className="sm:hidden">Gérer destinataires</span>
         </button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {recipientGroups.map((group) => (
-          <div
-            key={group.recipient_id}
-            className="bg-white/80 backdrop-blur rounded-xl p-3 border border-indigo-200 hover:border-indigo-400 transition-all hover:scale-105 cursor-pointer"
-            onClick={onRecipientClick}
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-lg font-bold mb-2">
-                {group.recipient_name[0]?.toUpperCase() || '?'}
+        {recipientGroups.map(group => {
+          const canNavigate = isInternalRecipient(group.recipient_username);
+
+          return (
+            <div
+              key={group.recipient_id}
+              className={`
+                bg-white/80 backdrop-blur rounded-xl p-3 border border-indigo-200
+                hover:border-indigo-400 transition-all hover:scale-105 cursor-pointer
+              `}
+              onClick={() => {
+                if (canNavigate) {
+                  navigate(`/profile/${group.recipient_username}`);
+                } else {
+                  onRecipientClick();
+                }
+              }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-lg font-bold mb-2">
+                  {group.recipient_name[0]?.toUpperCase() || '?'}
+                </div>
+
+                <p className="font-bold text-gray-900 text-sm truncate w-full">
+                  {group.recipient_name}
+                </p>
+
+                <p className="text-xs text-gray-600">
+                  {group.gift_count} cadeau{group.gift_count > 1 ? 'x' : ''}
+                </p>
+
+                <p className="text-sm font-bold text-purple-600 mt-1">
+                  {formatPrice(group.total_spent)}
+                </p>
+
+                {/* 🔗 Ajouter une indication visuelle */}
+                {canNavigate && (
+                  <p className="text-[11px] text-blue-600 mt-1">Voir le profil →</p>
+                )}
               </div>
-              <p className="font-bold text-gray-900 text-sm truncate w-full">{group.recipient_name}</p>
-              <p className="text-xs text-gray-600">
-                {group.gift_count} cadeau{group.gift_count > 1 ? 'x' : ''}
-              </p>
-              <p className="text-sm font-bold text-purple-600 mt-1">{formatPrice(group.total_spent)}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

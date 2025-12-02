@@ -14,11 +14,11 @@ import type { BudgetViewMode } from '../../types/db';
 export default function BudgetsView() {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear); // ⬅️ Utiliser currentYear
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [viewMode, setViewMode] = useState<BudgetViewMode>('theme');
   const [showExternalGiftModal, setShowExternalGiftModal] = useState(false);
 
-  // ✅ PASSER selectedYear ici
+  // ✅ Utiliser selectedYear dans les hooks
   const { budgets, loading, error, reload } = useBudget(user?.id || '', selectedYear);
 
   const { data: donutData, loading: donutLoading } = useBudgetDonutData(
@@ -26,6 +26,28 @@ export default function BudgetsView() {
     viewMode,
     selectedYear
   );
+
+  // 💰 Budget annuel = total global
+  const annualBudget = budgets.find(
+    b => b.budgetGoal.type === 'annuel' && b.budgetGoal.year === selectedYear
+  );
+  const totalSpent = annualBudget?.spent || 0;
+
+  // 🎯 Budgets "catégories" = tous sauf l'annuel
+  const categoryBudgets = budgets.filter(b => b.budgetGoal.type !== 'annuel');
+
+  // Budgets actifs = seulement les catégories où il y a des dépenses
+  const activeBudgets = categoryBudgets.filter(b => b.spent > 0);
+
+  // Moyenne par budget = somme des catégories / nb de catégories
+  const sumCategories = categoryBudgets.reduce((sum, b) => sum + b.spent, 0);
+  const avgPerBudget =
+    categoryBudgets.length > 0 ? sumCategories / categoryBudgets.length : 0;
+
+  // Budget le plus élevé = sur les catégories, pas sur l'annuel
+  const topBudget = categoryBudgets.length > 0
+    ? [...categoryBudgets].sort((a, b) => b.spent - a.spent)[0]
+    : null;
 
   // ✅ LOG DEBUG (à retirer après)
   console.log('🔍 Debug BudgetsView:', {
@@ -36,16 +58,9 @@ export default function BudgetsView() {
     donutDataLength: donutData.length,
     donutData,
     budgetsCount: budgets.length,
-    totalSpent: budgets.find(b => b.budgetGoal.type === 'annuel')?.spent
+    categoryBudgetsCount: categoryBudgets.length,
+    totalSpent
   });
-
-  const totalSpent = budgets.find(b =>
-    b.budgetGoal.type === 'annuel' && b.budgetGoal.year === selectedYear
-  )?.spent || 0;
-
-  const activeBudgets = budgets.filter(b => b.spent > 0);
-  const avgPerBudget = activeBudgets.length > 0 ? totalSpent / activeBudgets.length : 0;
-  const topBudget = [...budgets].sort((a, b) => b.spent - a.spent)[0];
 
   if (!user) {
     return (
@@ -98,7 +113,14 @@ export default function BudgetsView() {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className={`px-4 py-2 border-2 border-purple-300 rounded-xl font-bold text-lg text-purple-700 bg-white/80 backdrop-blur ${FOCUS_RING} hover:border-purple-500 transition-all hover:scale-105 cursor-pointer w-fit`}
+                className={`
+                  px-4 py-2 border-2 border-purple-300 rounded-xl
+                  font-bold text-lg text-purple-700
+                  bg-white/80 backdrop-blur
+                  ${FOCUS_RING}
+                  hover:border-purple-500 transition-all
+                  hover:scale-105 cursor-pointer w-fit
+                `}
               >
                 {Array.from({ length: currentYear - 2024 }, (_, i) => 2025 + i).map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -106,15 +128,15 @@ export default function BudgetsView() {
               </select>
             </div>
 
-            {budgets.length > 0 ? (
+            {categoryBudgets.length > 0 ? (
               <p className="text-gray-700 text-base sm:text-lg">
                 Vous avez dépensé{' '}
                 <span className="font-bold text-purple-700">
                   {formatPrice(totalSpent)}
                 </span>
-                {' '}sur{' '}
+                {' '}répartis sur{' '}
                 <span className="font-bold text-purple-700">
-                  {budgets.length} budget{budgets.length > 1 ? 's' : ''}
+                  {categoryBudgets.length} budget{categoryBudgets.length > 1 ? 's' : ''}
                 </span>
               </p>
             ) : (
@@ -194,7 +216,7 @@ export default function BudgetsView() {
                   </div>
                 </div>
 
-                {activeBudgets.length > 0 && (
+                {categoryBudgets.length > 0 && (
                   <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-purple-200/50 p-5">
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
                       <p className="text-sm text-gray-600 mb-1">Moyenne par budget</p>
@@ -223,7 +245,10 @@ export default function BudgetsView() {
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
                     <p className="text-sm text-gray-600 mb-1">Budgets actifs</p>
                     <p className="text-3xl font-bold text-green-600">
-                      {activeBudgets.length} <span className="text-xl text-gray-500">/ {budgets.length}</span>
+                      {activeBudgets.length}{' '}
+                      <span className="text-xl text-gray-500">
+                        / {categoryBudgets.length}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -249,7 +274,7 @@ export default function BudgetsView() {
               </div>
             </section>
 
-            {/* Donut (UNE SEULE FOIS) */}
+            {/* Donut */}
             <section>
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 📈 Répartition des dépenses
@@ -326,7 +351,7 @@ export default function BudgetsView() {
                     </p>
                   </div>
 
-                  {activeBudgets.length > 0 && (
+                  {categoryBudgets.length > 0 && (
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
                       <p className="text-sm text-gray-600 mb-1">Moyenne par budget</p>
                       <p className="text-2xl font-bold text-blue-600">
@@ -350,7 +375,7 @@ export default function BudgetsView() {
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
                     <p className="text-sm text-gray-600 mb-1">Budgets actifs</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {activeBudgets.length} / {budgets.length}
+                      {activeBudgets.length} / {categoryBudgets.length}
                     </p>
                   </div>
                 </div>

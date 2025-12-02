@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 📄 src/hooks/useBudget.ts
 // 🧠 Rôle : Budgets automatiques avec limites depuis budget_goals
-// 🇫🇷 100% français + shipping_cost inclus
+// 🇫🇷 100% français + shipping_cost inclus + prise en compte de paid_amount
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -82,6 +82,7 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
           id,
           status,
           created_at,
+          paid_amount,
           reserved_at,
           items!inner (
             id,
@@ -121,7 +122,7 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
 
       console.log('✅ External gifts récupérés (useBudget):', externalGifts);
 
-      // ✅ 3. Filtrer par année + calculer total_price
+      // ✅ 3. Filtrer par année + calculer total_price (paid_amount si présent)
       const yearClaims = (claims || [])
         .filter(claim => {
           const claimYear = new Date(claim.created_at).getFullYear();
@@ -130,13 +131,21 @@ export function useBudget(userId: string, year: number = new Date().getFullYear(
         .map(claim => {
           const item = claim.items;
           const wishlist = item?.wishlists;
-          const price = item?.price || 0;
+
+          const announcedPrice = item?.price || 0;
           const shipping = item?.shipping_cost || 0;
+          const paidAmount = claim.paid_amount as number | null;
+
+          const hasPaidAmount = paidAmount !== null && paidAmount !== undefined;
+
+          const total_price = hasPaidAmount
+            ? paidAmount
+            : announcedPrice + shipping;
 
           return {
             id: claim.id,
             title: item?.title || 'Sans titre',
-            total_price: price + shipping,
+            total_price,
             theme: wishlist?.theme || item?.original_theme || null,
             recipient_name: wishlist?.profiles?.display_name || 'Inconnu',
             claim_date: claim.created_at
@@ -257,13 +266,14 @@ export function useBudgetDonutData(
       try {
         setLoading(true);
 
-        // ✅ Claims
+        // ✅ Claims (AVEC paid_amount)
         const { data: claimsRaw, error: claimsError } = await supabase
           .from('claims')
           .select(`
             id,
             status,
             created_at,
+            paid_amount,
             items!inner (
               id,
               title,
@@ -401,11 +411,19 @@ export function useBudgetDonutData(
           console.log('✅ Noms destinataires external (donut):', externalRecipientNames);
         }
 
-        // Process claims
+        // ✅ Process claims (avec paid_amount si dispo)
         for (const claim of claims) {
           const item = claim.items;
           const wishlist = item?.wishlists;
-          const totalPrice = (item?.price || 0) + (item?.shipping_cost || 0);
+
+          const announcedPrice = item?.price || 0;
+          const shipping = item?.shipping_cost || 0;
+          const paidAmount = claim.paid_amount as number | null;
+          const hasPaidAmount = paidAmount !== null && paidAmount !== undefined;
+
+          const totalPrice = hasPaidAmount
+            ? paidAmount
+            : announcedPrice + shipping;
 
           let key = '';
           if (viewMode === 'theme' || viewMode === 'global') {
@@ -427,7 +445,7 @@ export function useBudgetDonutData(
           });
         }
 
-        // Process external gifts
+        // ✅ Process external gifts (paid_amount déjà réel)
         filteredExternal.forEach((gift: any) => {
           const totalPrice = gift.paid_amount || 0;
 
