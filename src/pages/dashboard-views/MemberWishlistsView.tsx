@@ -24,13 +24,15 @@ interface MemberWishlist {
   };
 }
 
-
 interface MemberWishlistsViewProps {
   memberWishlists: MemberWishlist[];
+  // 👉 Nouveau : nombre d'items par wishlist (clé = wishlist.id)
+  itemCounts: Record<string, number>;
 }
 
 export default function MemberWishlistsView({
   memberWishlists,
+  itemCounts,
 }: MemberWishlistsViewProps) {
   const navigate = useNavigate();
 
@@ -62,84 +64,107 @@ export default function MemberWishlistsView({
             THEMES[wl.theme as keyof typeof THEMES] ?? THEMES.autre;
           const themeColors = themeData.colors;
 
+          // 👉 Récupère le nombre de cadeaux pour cette wishlist
+          const itemCount = itemCounts[wl.id] ?? 0;
+
           return (
-          <div
-            key={`${member.wishlist_id}-${member.user_id}`}
-            className="bg-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-gray-100 flex flex-col h-full"
-          >
-            {/* Bannière thème */}
             <div
-              className="h-32 sm:h-40 relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors[0]}, ${themeColors[1]}, ${themeColors[2]})`,
-              }}
+              key={`${member.wishlist_id}-${member.user_id}`}
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-gray-100 flex flex-col h-full"
             >
-              <div className="absolute inset-0 bg-black/10" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-4xl sm:text-5xl drop-shadow-lg">
-                  {themeData.label.split(' ')[1]}
-                </div>
-              </div>
-
-              {/* Badge rôle / statut */}
-              <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                <span className="px-2 py-1 bg-white/90 backdrop-blur text-xs font-medium rounded-full text-gray-700">
-                  {member.role === 'owner' && '👑 Proprio'}
-                  {member.role === 'editor' && '✏️ Éditeur'}
-                  {member.role === 'viewer' && '👁️ Invité'}
-                  {!['owner', 'editor', 'viewer'].includes(member.role) && member.role}
-                </span>
-                {member.status !== 'actif' && (
-                  <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[11px] font-medium rounded-full">
-                    {member.status}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Contenu */}
-            <div className="p-4 sm:p-6 flex flex-col flex-1">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 line-clamp-1">
-                {wl.name}
-              </h3>
-
-              {wl.owner && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                  <span>par</span>
-                  <UserLink
-                    username={wl.owner.username}
-                    displayName={wl.owner.display_name}
-                    avatarUrl={wl.owner.avatar_url}
-                    size="sm"
-                    showName={false}
-                    className="shrink-0"
-                  />
-                  <span className="font-medium text-gray-700">
-                    {wl.owner.display_name}
-                  </span>
-                </div>
-              )}
-
-              {wl.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {wl.description}
-                </p>
-              )}
-
-              <p className="text-xs text-gray-500 mb-4">
-                Tu es <span className="font-semibold">Membre</span> de cette liste.
-              </p>
-
-              {/* 👇 Le bouton est poussé en bas */}
-              <button
-                onClick={() => navigate(`/list/${wl.slug}`)}
-                className={`w-full mt-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all ${FOCUS_RING}`}
+              {/* Bannière thème */}
+              <div
+                className="h-32 sm:h-40 relative overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColors[0]}, ${themeColors[1]}, ${themeColors[2]})`,
+                }}
               >
-                👁️ Voir la liste
-              </button>
-            </div>
-          </div>
+                <div className="absolute inset-0 bg-black/10" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-4xl sm:text-5xl drop-shadow-lg">
+                    {themeData.label.split(' ')[1]}
+                  </div>
+                </div>
 
+                {/* Badge rôle / statut */}
+                <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                  <span className="px-2 py-1 bg-white/90 backdrop-blur text-xs font-medium rounded-full text-gray-700">
+                    {member.role === 'owner' && '👑 Proprio'}
+                    {member.role === 'editor' && '✏️ Éditeur'}
+                    {member.role === 'viewer' && '👁️ Invité'}
+                    {!['owner', 'editor', 'viewer'].includes(member.role) && member.role}
+                  </span>
+                  {member.status !== 'actif' && (
+                    <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[11px] font-medium rounded-full">
+                      {member.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Contenu */}
+              <div className="p-4 sm:p-6 flex flex-col flex-1">
+                {/* Titre + nombre de cadeaux sur la même ligne */}
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 line-clamp-1">
+                    {wl.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                      />
+                    </svg>
+                    <span>
+                      {itemCount} {itemCount > 1 ? 'cadeaux' : 'cadeau'}
+                    </span>
+                  </div>
+                </div>
+
+                {wl.owner && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                    <span>par</span>
+                    <UserLink
+                      username={wl.owner.username}
+                      displayName={wl.owner.display_name}
+                      avatarUrl={wl.owner.avatar_url}
+                      size="sm"
+                      showName={false}
+                      className="shrink-0"
+                    />
+                    <span className="font-medium text-gray-700">
+                      {wl.owner.display_name}
+                    </span>
+                  </div>
+                )}
+
+                {wl.description && (
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    {wl.description}
+                  </p>
+                )}
+
+                <p className="text-xs text-gray-500 mb-4">
+                  Tu es <span className="font-semibold">Membre</span> de cette liste.
+                </p>
+
+                {/* 👇 Le bouton est poussé en bas */}
+                <button
+                  onClick={() => navigate(`/list/${wl.slug}`)}
+                  className={`w-full mt-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all ${FOCUS_RING}`}
+                >
+                  👁️ Voir la liste
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>

@@ -32,7 +32,10 @@ export default function ItemCard({
 }: ItemCardProps) {
   const [copiedPromo, setCopiedPromo] = useState(false);
 
-  // Promo mobile
+  // 🔎 Gestion "voir plus / voir moins" pour la note (mobile + desktop)
+  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
+
+  // Promo desktop
   const promoBtnRef = useRef<HTMLButtonElement | null>(null);
   const promoMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [shouldMarquee, setShouldMarquee] = useState(false);
@@ -118,7 +121,7 @@ export default function ItemCard({
       {/* ═════════════════════════ MOBILE (< md) ═════════════════════════ */}
       <div className="md:hidden">
         <div className="flex gap-4 p-4">
-          {/* Colonne gauche : Image + Boutons */}
+          {/* Colonne gauche : Image + Promo */}
           <div className="flex-shrink-0 flex flex-col gap-2" style={{ width: '112px' }}>
             {item.image_url ? (
               <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
@@ -131,96 +134,79 @@ export default function ItemCard({
             )}
 
             <div className="flex flex-col gap-1.5">
-              {item.url && (
-              <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${FOCUS_RING} shadow-sm`}
+              {/* 👉 Bouton "Voir" déplacé en bas avec les actions, pas ici */}
+              {item.promo_code && (
+                <button
+                  onClick={handleCopyPromo}
+                  className={`text-sm px-3 py-1 ${
+                    copiedPromo
+                      ? 'bg-green-600 text-white'
+                      : 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
+                  } rounded-lg font-bold transition-all ${FOCUS_RING} inline-flex items-center gap-1.5 overflow-hidden max-w-[200px]`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                  Voir
-                </a>
-              )}
-
-            {item.promo_code && (
-              <button
-                onClick={handleCopyPromo}
-                className={`text-sm px-3 py-1 ${
-                  copiedPromo
-                    ? 'bg-green-600 text-white'
-                    : 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
-                } rounded-lg font-bold transition-all ${FOCUS_RING} inline-flex items-center gap-1.5 overflow-hidden max-w-[200px]`}
-              >
-                {copiedPromo ? (
-                  <>
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="whitespace-nowrap">Copié !</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {/* Marquee uniquement si le code est long */}
-                    {item.promo_code.length > 12 ? (
-                      <div className="marquee-container flex-1 min-w-0">
-                        <div className="marquee-track marquee-duration-8s">
-                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
-                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                  {copiedPromo ? (
+                    <>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="whitespace-nowrap">Copié !</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {/* Marquee uniquement si le code est long */}
+                      {item.promo_code.length > 12 ? (
+                        <div className="marquee-container flex-1 min-w-0">
+                          <div className="marquee-track marquee-duration-8s">
+                            <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                            <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <span className="font-mono">{item.promo_code}</span>
-                    )}
-                  </>
-                )}
-              </button>
-            )}
+                      ) : (
+                        <span className="font-mono">{item.promo_code}</span>
+                      )}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
           {/* Colonne droite : Contenu */}
           <div className="flex-1 min-w-0 flex flex-col justify-between">
             <div>
-              <h4 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2">{item.title}</h4>
+              <h4 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2">
+                {item.title}
+              </h4>
 
-                {item.price && (
-                  <div className="mb-2">
-                    <div className="flex items-center gap-1.5 text-purple-600">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="font-bold text-lg">{item.price.toFixed(2)} €</span>
-                    </div>
-
-                    {item.shipping_cost != null && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        + {item.shipping_cost.toFixed(2)} € de frais de port
-                      </p>
-                    )}
+              {item.price && (
+                <div className="mb-2">
+                  <div className="flex items-center gap-1.5 text-purple-600">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="font-bold text-lg">{item.price.toFixed(2)} €</span>
                   </div>
-                )}
 
+                  {item.shipping_cost != null && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      + {item.shipping_cost.toFixed(2)} € de frais de port
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center gap-1.5 mb-2">
                 <span
@@ -238,20 +224,60 @@ export default function ItemCard({
                 </span>
               </div>
 
-              {item.note && <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.note}</p>}
+              {item.note && (
+                <div className="mb-2">
+                  <p
+                    className={`text-xs text-gray-600 ${
+                      !isNoteExpanded ? 'line-clamp-2' : ''
+                    }`}
+                  >
+                    {item.note}
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-1 text-[11px] font-semibold text-purple-600 hover:text-purple-800"
+                    onClick={() => setIsNoteExpanded(v => !v)}
+                  >
+                    {isNoteExpanded ? 'Voir moins' : 'Voir plus'}
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {item.size && (
-                  <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 rounded-md">📏 {item.size}</span>
+                  <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 rounded-md">
+                    📏 {item.size}
+                  </span>
                 )}
                 {item.color && (
-                  <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 rounded-md">🎨 {item.color}</span>
+                  <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 rounded-md">
+                    🎨 {item.color}
+                  </span>
                 )}
               </div>
             </div>
 
-            {/* Boutons actions MOBILE */}
-            <div className="flex justify-end mt-2 gap-1.5 items-center">
+            {/* Boutons actions MOBILE (en bas) */}
+            <div className="flex items-center gap-1.5 mt-2">
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-2 rounded-lg text-xs font-semibold transition-all ${FOCUS_RING} shadow-sm`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                  Voir
+                </a>
+              )}
+
               <div className="flex-1">
                 <ClaimActionButton
                   item={item}
@@ -290,7 +316,9 @@ export default function ItemCard({
 
         <div className="p-4 flex-1 flex flex-col">
           <div className="flex items-baseline justify-between gap-3 mb-2 min-w-0">
-            <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">{item.title}</h4>
+            <h4 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 min-w-0">
+              {item.title}
+            </h4>
 
             {item.price && (
               <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -315,11 +343,26 @@ export default function ItemCard({
                 )}
               </div>
             )}
-
-
           </div>
 
-          {item.note && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.note}</p>}
+          {item.note && (
+            <div className="mb-3">
+              <p
+                className={`text-sm text-gray-600 ${
+                  !isNoteExpanded ? 'line-clamp-2' : ''
+                }`}
+              >
+                {item.note}
+              </p>
+              <button
+                type="button"
+                className="mt-1 text-xs font-semibold text-purple-600 hover:text-purple-800"
+                onClick={() => setIsNoteExpanded(v => !v)}
+              >
+                {isNoteExpanded ? 'Voir moins' : 'Voir plus'}
+              </button>
+            </div>
+          )}
 
           <div className="mb-3">
             <span
@@ -349,69 +392,73 @@ export default function ItemCard({
                   🎨 {item.color}
                 </span>
               )}
-            {item.promo_code && (
-              <button
-                ref={promoBtnRef}
-                onClick={handleCopyPromo}
-                className={`relative flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${FOCUS_RING} shadow-sm overflow-hidden
-                  ${copiedPromo ? 'bg-green-600 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}
-                `}
-                title="Copier le code promo"
-                aria-live="polite"
-              >
-                <svg
-                  className="w-3.5 h-3.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
+              {item.promo_code && (
+                <button
+                  ref={promoBtnRef}
+                  onClick={handleCopyPromo}
+                  className={`relative flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${FOCUS_RING} shadow-sm overflow-hidden
+                    ${copiedPromo ? 'bg-green-600 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}
+                  `}
+                  title="Copier le code promo"
+                  aria-live="polite"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
+                  <svg
+                    className="w-3.5 h-3.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
 
-                {/* Mesure invisible pour détecter débordement */}
-                <span
-                  ref={promoMeasureRef}
-                  className="absolute -left-[9999px] top-auto whitespace-nowrap font-mono"
-                  aria-hidden="true"
-                >
-                  {item.promo_code}
-                </span>
+                  {/* Mesure invisible pour détecter débordement */}
+                  <span
+                    ref={promoMeasureRef}
+                    className="absolute -left-[9999px] top-auto whitespace-nowrap font-mono"
+                    aria-hidden="true"
+                  >
+                    {item.promo_code}
+                  </span>
 
-                {/* Contenu visible avec marquee conditionnel */}
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  {(() => {
-                    if (copiedPromo) {
-                      return <span className="inline-block font-mono">Copié !</span>;
-                    }
+                  {/* Contenu visible avec marquee conditionnel */}
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    {(() => {
+                      if (copiedPromo) {
+                        return <span className="inline-block font-mono">Copié !</span>;
+                      }
 
-                    if (!shouldMarquee) {
-                      return <span className="inline-block font-mono truncate">{item.promo_code}</span>;
-                    }
+                      if (!shouldMarquee) {
+                        return (
+                          <span className="inline-block font-mono truncate">
+                            {item.promo_code}
+                          </span>
+                        );
+                      }
 
-                    // Marquee animé
-                    return (
-                      <div className="marquee-track marquee-duration-8s">
-                        <span className="inline-block font-mono px-2">{item.promo_code}</span>
-                        <span className="inline-block font-mono px-2">{item.promo_code}</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </button>
-            )}
+                      // Marquee animé
+                      return (
+                        <div className="marquee-track marquee-duration-8s">
+                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                          <span className="inline-block font-mono px-2">{item.promo_code}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </button>
+              )}
             </div>
           )}
 
           {/* Boutons DESKTOP */}
           <div className="flex gap-2 mt-auto">
             {item.url && (
-            <a
+              <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
