@@ -23,7 +23,7 @@ export default function AccessDeniedScreen({
 }: Props) {
   const navigate = useNavigate();
 
-  // Si pas connecté ET liste privée
+  // ⬅️ CAS 1 : Pas connecté + liste privée → tu ne peux rien faire, il faut se connecter
   if (!isLoggedIn && wishlist.visibility === 'privée') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
@@ -48,7 +48,62 @@ export default function AccessDeniedScreen({
     );
   }
 
-  // Si connecté mais pas membre
+  // ⬅️ CAS 2 : Pas connecté + liste partagée → se connecter pour DEMANDER l'accès
+  if (!isLoggedIn && wishlist.visibility === 'partagée') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+        <BannerComponent height={BANNER_HEIGHT.medium} />
+
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center -mt-16 relative z-10">
+          <div className="backdrop-blur-xl bg-white/80 rounded-3xl shadow-2xl border border-white/20 p-8">
+            <div className="text-6xl mb-4">🔗</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              {wishlist.name}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Cette liste est partagée. Tu dois <strong>te connecter</strong> pour pouvoir demander l&apos;accès au propriétaire.
+            </p>
+            <button
+              onClick={() => navigate('/?login=true')}
+              className={`bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-all ${FOCUS_RING}`}
+            >
+              Se connecter pour demander l&apos;accès
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ⬅️ (optionnel) CAS 3 : Pas connecté + publique (théoriquement tu ne devrais pas arriver ici)
+  if (!isLoggedIn && wishlist.visibility === 'publique') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+        <BannerComponent height={BANNER_HEIGHT.medium} />
+
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center -mt-16 relative z-10">
+          <div className="backdrop-blur-xl bg-white/80 rounded-3xl shadow-2xl border border-white/20 p-8">
+            <div className="text-6xl mb-4">🌍</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              {wishlist.name}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Cette liste est publique. Tu peux normalement la consulter. Si tu vois cet écran,
+              essaie de te connecter pour continuer.
+            </p>
+            <button
+              onClick={() => navigate('/?login=true')}
+              className={`bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition-all ${FOCUS_RING}`}
+            >
+              Se connecter
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ⬅️ CAS 4 : Connecté mais pas membre → bouton "Demander l'accès"
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       <BannerComponent height={BANNER_HEIGHT.medium} />
